@@ -4,39 +4,34 @@
 
     window.EF = window.EF || {};
 
-    EF.formatCurrency = function (value) {
-
-        return Number(value).toLocaleString("es-ES", {
-
-            style: "currency",
-
-            currency: "EUR",
-
-            minimumFractionDigits: 0,
-
-            maximumFractionDigits: 0
-
-        });
-
+    const CURRENCY = {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
     };
 
-    EF.parseNumber = function (input) {
+    EF.formatCurrency = value =>
+        Number(value).toLocaleString("es-ES", CURRENCY);
+
+    EF.parseNumber = input => {
 
         if (!input) return NaN;
 
         let value = input.value.trim();
 
-        const isPercentage =
+        const percentage = [
 
-            input.classList.contains("ef-rate") ||
+            "ef-rate",
+            "ef-annual-return",
+            "ef-withdrawal-rate",
+            "ef-real-return"
 
-            input.classList.contains("ef-annual-return") ||
+        ].some(className =>
+            input.classList.contains(className)
+        );
 
-            input.classList.contains("ef-withdrawal-rate") ||
-
-            input.classList.contains("ef-real-return");
-
-        if (isPercentage) {
+        if (percentage) {
 
             value = value.replace(",", ".");
 
@@ -50,19 +45,20 @@
 
     };
 
-    EF.formatInput = function (value, input) {
+    EF.formatInput = (value, input) => {
 
-        const isPercentage =
+        const percentage = [
 
-            input.classList.contains("ef-rate") ||
+            "ef-rate",
+            "ef-annual-return",
+            "ef-withdrawal-rate",
+            "ef-real-return"
 
-            input.classList.contains("ef-annual-return") ||
+        ].some(className =>
+            input.classList.contains(className)
+        );
 
-            input.classList.contains("ef-withdrawal-rate") ||
-
-            input.classList.contains("ef-real-return");
-
-        if (isPercentage) {
+        if (percentage) {
 
             let clean = value.replace(/[^\d,]/g, "");
 
@@ -89,40 +85,39 @@
         if (!clean) return "";
 
         return clean.replace(
-
             /\B(?=(\d{3})+(?!\d))/g,
-
             "."
-
         );
 
     };
 
-    EF.setupInputs = function (calculator) {
+    EF.setupInputs = calculator => {
 
-        calculator.querySelectorAll(".ef-input").forEach(function (input) {
+        calculator.querySelectorAll(".ef-input").forEach(input => {
 
             if (input.tagName === "SELECT") return;
 
             input.addEventListener("input", function () {
 
-                const cursorPosition = this.selectionStart;
+                const position = this.selectionStart;
 
-                const originalLength = this.value.length;
+                const oldLength = this.value.length;
 
-                this.value = EF.formatInput(this.value, this);
+                this.value = EF.formatInput(
+
+                    this.value,
+
+                    this
+
+                );
 
                 const newLength = this.value.length;
 
-                const newCursorPosition =
-
-                    cursorPosition + (newLength - originalLength);
-
                 this.setSelectionRange(
 
-                    newCursorPosition,
+                    position + newLength - oldLength,
 
-                    newCursorPosition
+                    position + newLength - oldLength
 
                 );
 
@@ -132,7 +127,7 @@
 
     };
 
-    EF.showError = function (calculator) {
+    EF.showError = calculator => {
 
         const error = calculator.querySelector(".ef-error");
 
@@ -146,71 +141,63 @@
 
     };
 
-    EF.showResults = function (calculator) {
+    EF.hideAll = calculator => {
 
-        const elements = [
+        [
 
+            ".ef-error",
             ".ef-results",
-
             ".ef-chart",
-
             ".ef-share",
-
             ".ef-reset"
 
-        ];
-
-        elements.forEach(function (selector) {
+        ].forEach(selector => {
 
             const element = calculator.querySelector(selector);
 
-            if (element) element.style.display =
+            if (element) {
 
-                selector === ".ef-results" ? "grid" : "block";
+                element.style.display = "none";
+
+            }
 
         });
 
     };
 
-    EF.setupReset = function (calculator) {
+    EF.showResults = calculator => {
+
+        calculator.querySelector(".ef-results").style.display = "grid";
+
+        calculator.querySelector(".ef-chart").style.display = "block";
+
+        calculator.querySelector(".ef-share").style.display = "block";
+
+        calculator.querySelector(".ef-reset").style.display = "block";
+
+    };
+
+    EF.setupReset = calculator => {
 
         const reset = calculator.querySelector(".ef-reset");
 
         if (!reset) return;
 
-        reset.addEventListener("click", function () {
+        reset.addEventListener("click", () => {
 
-            calculator.querySelectorAll("input").forEach(function (input) {
+            calculator.querySelectorAll("input").forEach(input => {
 
                 input.value = "";
 
             });
 
-            calculator.querySelectorAll("select").forEach(function (select) {
+            calculator.querySelectorAll("select").forEach(select => {
 
                 select.selectedIndex = 0;
 
             });
 
-            [
-
-                ".ef-error",
-
-                ".ef-results",
-
-                ".ef-chart",
-
-                ".ef-share"
-
-            ].forEach(function (selector) {
-
-                const element = calculator.querySelector(selector);
-
-                if (element) element.style.display = "none";
-
-            });
-
-            reset.style.display = "none";
+            EF.hideAll(calculator);
 
             if (calculator._efChart) {
 
@@ -232,159 +219,7 @@
 
     };
 
-    EF.setupSharing = function (calculator, getShareText) {
-
-        const feedback = calculator.querySelector(
-
-            ".ef-share-feedback"
-
-        );
-
-        const shareText = function () {
-
-            return encodeURIComponent(getShareText());
-
-        };
-
-        const whatsapp = calculator.querySelector(
-
-            ".ef-share-whatsapp"
-
-        );
-
-        if (whatsapp) {
-
-            whatsapp.addEventListener("click", function () {
-
-                window.open(
-
-                    "https://wa.me/?text=" + shareText(),
-
-                    "_blank"
-
-                );
-
-            });
-
-        }
-
-        const telegram = calculator.querySelector(
-
-            ".ef-share-telegram"
-
-        );
-
-        if (telegram) {
-
-            telegram.addEventListener("click", function () {
-
-                window.open(
-
-                    "https://t.me/share/url?url=" +
-
-                    encodeURIComponent(window.location.href) +
-
-                    "&text=" +
-
-                    shareText(),
-
-                    "_blank"
-
-                );
-
-            });
-
-        }
-
-        const facebook = calculator.querySelector(
-
-            ".ef-share-facebook"
-
-        );
-
-        if (facebook) {
-
-            facebook.addEventListener("click", function () {
-
-                window.open(
-
-                    "https://www.facebook.com/sharer/sharer.php?u=" +
-
-                    encodeURIComponent(window.location.href),
-
-                    "_blank"
-
-                );
-
-            });
-
-        }
-
-        const x = calculator.querySelector(".ef-share-x");
-
-        if (x) {
-
-            x.addEventListener("click", function () {
-
-                window.open(
-
-                    "https://twitter.com/intent/tweet?text=" +
-
-                    shareText() +
-
-                    "&url=" +
-
-                    encodeURIComponent(window.location.href),
-
-                    "_blank"
-
-                );
-
-            });
-
-        }
-
-        const copy = calculator.querySelector(".ef-share-copy");
-
-        if (copy) {
-
-            copy.addEventListener("click", async function () {
-
-                try {
-
-                    await navigator.clipboard.writeText(
-
-                        getShareText()
-
-                    );
-
-                    if (feedback) {
-
-                        feedback.textContent =
-
-                            "Resultado copiado al portapapeles.";
-
-                    }
-
-                } catch (error) {
-
-                    if (feedback) {
-
-                        feedback.textContent =
-
-                            "No se ha podido copiar el resultado.";
-
-                    }
-
-                }
-
-            });
-
-        }
-
-    };
-
-    EF.createChart = function (calculator, result, datasets) {
+    EF.createChart = (calculator, result, datasets) => {
 
         const canvas = calculator.querySelector(
 
@@ -400,19 +235,13 @@
 
         }
 
-        const labels = result.annualData.map(function (item) {
-
-            return item.year;
-
-        });
-
         calculator._efChart = new Chart(canvas, {
 
             type: "line",
 
             data: {
 
-                labels: labels,
+                labels: result.annualData.map(item => item.year),
 
                 datasets: datasets
 
@@ -464,23 +293,17 @@
 
                         callbacks: {
 
-                            label: function (context) {
+                            label: context =>
 
-                                return (
+                                context.dataset.label +
 
-                                    context.dataset.label +
+                                ": " +
 
-                                    ": " +
+                                EF.formatCurrency(
 
-                                    EF.formatCurrency(
+                                    context.parsed.y
 
-                                        context.parsed.y
-
-                                    )
-
-                                );
-
-                            }
+                                )
 
                         }
 
@@ -496,23 +319,7 @@
 
                             display: true,
 
-                            text: "Años",
-
-                            font: {
-
-                                family: "Nunito Sans"
-
-                            }
-
-                        },
-
-                        ticks: {
-
-                            font: {
-
-                                family: "Nunito Sans"
-
-                            }
+                            text: "Años"
 
                         }
 
@@ -524,17 +331,9 @@
 
                         ticks: {
 
-                            font: {
+                            callback: value =>
 
-                                family: "Nunito Sans"
-
-                            },
-
-                            callback: function (value) {
-
-                                return EF.formatCurrency(value);
-
-                            }
+                                EF.formatCurrency(value)
 
                         }
 
@@ -548,7 +347,133 @@
 
     };
 
-    EF.compound = function (
+    EF.setupSharing = calculator => {
+
+        const text = () =>
+
+            "He calculado mi resultado financiero en el Vademécum Financiero.";
+
+        const open = url => window.open(url, "_blank");
+
+        const whatsapp = calculator.querySelector(
+
+            ".ef-share-whatsapp"
+
+        );
+
+        if (whatsapp) {
+
+            whatsapp.onclick = () => open(
+
+                "https://wa.me/?text=" +
+
+                encodeURIComponent(text())
+
+            );
+
+        }
+
+        const telegram = calculator.querySelector(
+
+            ".ef-share-telegram"
+
+        );
+
+        if (telegram) {
+
+            telegram.onclick = () => open(
+
+                "https://t.me/share/url?url=" +
+
+                encodeURIComponent(location.href) +
+
+                "&text=" +
+
+                encodeURIComponent(text())
+
+            );
+
+        }
+
+        const facebook = calculator.querySelector(
+
+            ".ef-share-facebook"
+
+        );
+
+        if (facebook) {
+
+            facebook.onclick = () => open(
+
+                "https://www.facebook.com/sharer/sharer.php?u=" +
+
+                encodeURIComponent(location.href)
+
+            );
+
+        }
+
+        const x = calculator.querySelector(".ef-share-x");
+
+        if (x) {
+
+            x.onclick = () => open(
+
+                "https://twitter.com/intent/tweet?text=" +
+
+                encodeURIComponent(text()) +
+
+                "&url=" +
+
+                encodeURIComponent(location.href)
+
+            );
+
+        }
+
+        const copy = calculator.querySelector(".ef-share-copy");
+
+        if (copy) {
+
+            copy.onclick = async () => {
+
+                const feedback = calculator.querySelector(
+
+                    ".ef-share-feedback"
+
+                );
+
+                try {
+
+                    await navigator.clipboard.writeText(text());
+
+                    if (feedback) {
+
+                        feedback.textContent =
+
+                            "Resultado copiado al portapapeles.";
+
+                    }
+
+                } catch {
+
+                    if (feedback) {
+
+                        feedback.textContent =
+
+                            "No se ha podido copiar el resultado.";
+
+                    }
+
+                }
+
+            };
+
+        }
+
+    };
+
+    EF.compound = (
 
         capital,
 
@@ -560,17 +485,17 @@
 
         frequency
 
-    ) {
+    ) => {
 
         let balance = capital;
 
-        let totalInterest = 0;
+        let interestTotal = 0;
 
-        const monthsPerPeriod = 12 / frequency;
+        const months = years * 12;
+
+        const periodMonths = 12 / frequency;
 
         const periodRate = rate / 100 / frequency;
-
-        const totalMonths = years * 12;
 
         const annualData = [{
 
@@ -584,17 +509,17 @@
 
         }];
 
-        for (let month = 1; month <= totalMonths; month++) {
+        for (let month = 1; month <= months; month++) {
 
             balance += monthly;
 
-            if (month % monthsPerPeriod === 0) {
+            if (month % periodMonths === 0) {
 
                 const interest = balance * periodRate;
 
                 balance += interest;
 
-                totalInterest += interest;
+                interestTotal += interest;
 
             }
 
@@ -606,7 +531,7 @@
 
                     invested: capital + monthly * month,
 
-                    interest: totalInterest,
+                    interest: interestTotal,
 
                     balance: balance
 
@@ -618,9 +543,9 @@
 
         return {
 
-            invested: capital + monthly * totalMonths,
+            invested: capital + monthly * months,
 
-            interest: totalInterest,
+            interest: interestTotal,
 
             final: balance,
 
@@ -630,15 +555,13 @@
 
     };
 
-    EF.simple = function (capital, rate, years) {
+    EF.simple = (capital, rate, years) => {
 
-        const annualInterest = capital * (rate / 100);
+        const interest = capital * rate / 100;
 
         const annualData = [];
 
         for (let year = 0; year <= years; year++) {
-
-            const interest = annualInterest * year;
 
             annualData.push({
 
@@ -646,9 +569,9 @@
 
                 invested: capital,
 
-                interest: interest,
+                interest: interest * year,
 
-                balance: capital + interest
+                balance: capital + interest * year
 
             });
 
@@ -658,9 +581,9 @@
 
             invested: capital,
 
-            interest: annualInterest * years,
+            interest: interest * years,
 
-            final: capital + annualInterest * years,
+            final: capital + interest * years,
 
             annualData: annualData
 
@@ -668,7 +591,7 @@
 
     };
 
-    EF.simpleSavings = function (
+    EF.simpleSavings = (
 
         capital,
 
@@ -680,11 +603,15 @@
 
         frequency
 
-    ) {
+    ) => {
 
-        const totalPeriods = years * frequency;
+        const periods = years * frequency;
 
         const periodRate = rate / 100 / frequency;
+
+        let invested = capital;
+
+        let interest = capital * rate / 100 * years;
 
         const annualData = [{
 
@@ -698,23 +625,15 @@
 
         }];
 
-        let totalInterest = capital * (rate / 100) * years;
+        for (let period = 1; period <= periods; period++) {
 
-        let totalInvested = capital;
-
-        for (let period = 1; period <= totalPeriods; period++) {
-
-            const remainingPeriods = totalPeriods - period;
-
-            totalInterest +=
-
-                contribution *
+            interest += contribution *
 
                 periodRate *
 
-                remainingPeriods;
+                (periods - period);
 
-            totalInvested += contribution;
+            invested += contribution;
 
             if (period % frequency === 0) {
 
@@ -722,11 +641,11 @@
 
                     year: period / frequency,
 
-                    invested: totalInvested,
+                    invested: invested,
 
-                    interest: totalInterest,
+                    interest: interest,
 
-                    balance: totalInvested + totalInterest
+                    balance: invested + interest
 
                 });
 
@@ -736,11 +655,11 @@
 
         return {
 
-            invested: totalInvested,
+            invested: invested,
 
-            interest: totalInterest,
+            interest: interest,
 
-            final: totalInvested + totalInterest,
+            final: invested + interest,
 
             annualData: annualData
 
@@ -748,55 +667,35 @@
 
     };
 
-    EF.mortgage = function (loan, rate, years) {
+    EF.mortgage = (loan, rate, years) => {
 
         const monthlyRate = rate / 100 / 12;
 
-        const totalMonths = years * 12;
+        const months = years * 12;
 
-        let monthlyPayment;
+        const payment = monthlyRate === 0
 
-        if (monthlyRate === 0) {
+            ? loan / months
 
-            monthlyPayment = loan / totalMonths;
+            : loan *
 
-        } else {
+            (
 
-            monthlyPayment =
+                monthlyRate *
 
-                loan *
+                Math.pow(1 + monthlyRate, months)
 
-                (
+            ) /
 
-                    monthlyRate *
+            (
 
-                    Math.pow(
+                Math.pow(1 + monthlyRate, months) - 1
 
-                        1 + monthlyRate,
-
-                        totalMonths
-
-                    )
-
-                ) /
-
-                (
-
-                    Math.pow(
-
-                        1 + monthlyRate,
-
-                        totalMonths
-
-                    ) - 1
-
-                );
-
-        }
+            );
 
         let balance = loan;
 
-        let totalInterest = 0;
+        let interestTotal = 0;
 
         const annualData = [{
 
@@ -808,15 +707,13 @@
 
         }];
 
-        for (let month = 1; month <= totalMonths; month++) {
+        for (let month = 1; month <= months; month++) {
 
             const interest = balance * monthlyRate;
 
-            const principal = monthlyPayment - interest;
+            balance -= payment - interest;
 
-            balance -= principal;
-
-            totalInterest += interest;
+            interestTotal += interest;
 
             if (month % 12 === 0) {
 
@@ -826,7 +723,7 @@
 
                     balance: Math.max(balance, 0),
 
-                    interest: totalInterest
+                    interest: interestTotal
 
                 });
 
@@ -836,11 +733,11 @@
 
         return {
 
-            monthlyPayment: monthlyPayment,
+            monthlyPayment: payment,
 
-            totalInterest: totalInterest,
+            totalInterest: interestTotal,
 
-            totalPaid: loan + totalInterest,
+            totalPaid: loan + interestTotal,
 
             annualData: annualData
 
@@ -848,37 +745,27 @@
 
     };
 
-    EF.financialIndependence = function (
+    EF.financialIndependence = (
 
-        currentCapital,
+        capital,
 
-        annualExpenses,
+        expenses,
 
-        monthlySavings,
+        savings,
 
-        annualReturn,
+        returnRate,
 
         withdrawalRate
 
-    ) {
+    ) => {
 
-        const targetCapital =
-
-            annualExpenses /
-
-            (withdrawalRate / 100);
+        const target = expenses / (withdrawalRate / 100);
 
         const monthlyReturn =
 
-            Math.pow(
+            Math.pow(1 + returnRate / 100, 1 / 12) - 1;
 
-                1 + annualReturn / 100,
-
-                1 / 12
-
-            ) - 1;
-
-        let capital = currentCapital;
+        let current = capital;
 
         let months = 0;
 
@@ -886,19 +773,19 @@
 
             year: 0,
 
-            capital: capital,
+            capital: current,
 
-            target: targetCapital
+            target: target
 
         }];
 
-        while (capital < targetCapital && months < 1200) {
+        while (current < target && months < 1200) {
 
-            capital =
+            current =
 
-                capital * (1 + monthlyReturn) +
+                current * (1 + monthlyReturn) +
 
-                monthlySavings;
+                savings;
 
             months++;
 
@@ -908,9 +795,9 @@
 
                     year: months / 12,
 
-                    capital: capital,
+                    capital: current,
 
-                    target: targetCapital
+                    target: target
 
                 });
 
@@ -920,11 +807,9 @@
 
         return {
 
-            target: targetCapital,
+            target: target,
 
             years: months / 12,
-
-            capital: capital,
 
             annualData: annualData
 
@@ -932,73 +817,57 @@
 
     };
 
-    EF.emergencyFund = function (
+    EF.emergencyFund = (
 
-        monthlyExpenses,
+        expenses,
 
-        coverageMonths,
+        monthsTarget,
 
-        currentSavings,
+        savings,
 
-        monthlyContribution
+        contribution
 
-    ) {
+    ) => {
 
-        const target = monthlyExpenses * coverageMonths;
+        const target = expenses * monthsTarget;
 
-        const remaining = Math.max(
+        const remaining = Math.max(target - savings, 0);
 
-            target - currentSavings,
-
-            0
-
-        );
+        let current = savings;
 
         let months = 0;
-
-        let capital = currentSavings;
 
         const annualData = [{
 
             year: 0,
 
-            capital: capital,
+            capital: current,
 
             target: target
 
         }];
 
-        if (remaining > 0 && monthlyContribution > 0) {
+        while (
 
-            while (capital < target && months < 1200) {
+            current < target &&
 
-                capital += monthlyContribution;
+            contribution > 0 &&
 
-                months++;
+            months < 1200
 
-                if (months % 12 === 0) {
+        ) {
 
-                    annualData.push({
+            current += contribution;
 
-                        year: months / 12,
+            months++;
 
-                        capital: Math.min(capital, target),
-
-                        target: target
-
-                    });
-
-                }
-
-            }
-
-            if (months % 12 !== 0 && months < 1200) {
+            if (months % 12 === 0) {
 
                 annualData.push({
 
                     year: months / 12,
 
-                    capital: Math.min(capital, target),
+                    capital: Math.min(current, target),
 
                     target: target
 
@@ -1022,97 +891,67 @@
 
     };
 
-    EF.retirement = function (
+    EF.retirement = (
 
         currentAge,
 
         retirementAge,
 
-        currentSavings,
+        savings,
 
-        monthlyContribution,
+        contribution,
 
-        realReturn,
+        returnRate,
 
-        monthlyIncome,
+        income,
 
         retirementYears
 
-    ) {
+    ) => {
 
-        const yearsToRetirement = retirementAge - currentAge;
+        const years = retirementAge - currentAge;
 
         const monthlyRate =
 
-            Math.pow(
+            Math.pow(1 + returnRate / 100, 1 / 12) - 1;
 
-                1 + realReturn / 100,
+        const months = retirementYears * 12;
 
-                1 / 12
+        const target = monthlyRate === 0
 
-            ) - 1;
+            ? income * months
 
-        const totalMonths = retirementYears * 12;
+            : income *
 
-        let targetCapital;
+            (
 
-        if (monthlyRate === 0) {
+                1 -
 
-            targetCapital = monthlyIncome * totalMonths;
+                Math.pow(1 + monthlyRate, -months)
 
-        } else {
+            ) /
 
-            targetCapital =
+            monthlyRate;
 
-                monthlyIncome *
-
-                (
-
-                    1 -
-
-                    Math.pow(
-
-                        1 + monthlyRate,
-
-                        -totalMonths
-
-                    )
-
-                ) /
-
-                monthlyRate;
-
-        }
-
-        let projectedCapital = currentSavings;
+        let current = savings;
 
         const annualData = [{
 
             year: 0,
 
-            capital: projectedCapital,
+            capital: current,
 
-            target: targetCapital
+            target: target
 
         }];
 
-        for (
+        for (let month = 1; month <= years * 12; month++) {
 
-            let month = 1;
+            current =
 
-            month <= yearsToRetirement * 12;
+                current * (1 + monthlyRate) +
 
-            month++
-
-        ) {
-
-            projectedCapital =
-
-                projectedCapital *
-
-                (1 + monthlyRate) +
-
-                monthlyContribution;
+                contribution;
 
             if (month % 12 === 0) {
 
@@ -1120,9 +959,9 @@
 
                     year: month / 12,
 
-                    capital: projectedCapital,
+                    capital: current,
 
-                    target: targetCapital
+                    target: target
 
                 });
 
@@ -1132,13 +971,11 @@
 
         return {
 
-            target: targetCapital,
+            target: target,
 
-            projected: projectedCapital,
+            projected: current,
 
-            difference: projectedCapital - targetCapital,
-
-            yearsToRetirement: yearsToRetirement,
+            difference: current - target,
 
             annualData: annualData
 
@@ -1146,73 +983,69 @@
 
     };
 
-    function getValue(calculator, selector) {
+    const value = (calculator, selector) =>
 
-        return EF.parseNumber(
+        EF.parseNumber(
 
             calculator.querySelector(selector)
 
         );
 
-    }
+    const line = (label, data, color, width) => ({
 
-    function hideResults(calculator) {
+        label: label,
 
-        [
+        data: data,
 
-            ".ef-results",
+        borderColor: color,
 
-            ".ef-chart",
+        borderWidth: width,
 
-            ".ef-share",
+        pointRadius: 0,
 
-            ".ef-reset"
+        pointHoverRadius: 5,
 
-        ].forEach(function (selector) {
+        pointHitRadius: 12,
 
-            const element = calculator.querySelector(selector);
+        tension: 0.25,
 
-            if (element) element.style.display = "none";
+        fill: false
 
-        });
+    });
 
-    }
+    function setup(selector, calculate) {
 
-    function showError(calculator) {
-
-        hideResults(calculator);
-
-        EF.showError(calculator);
-
-    }
-
-    function setupCalculator(selector, calculate) {
-
-        document.querySelectorAll(selector).forEach(function (calculator) {
+        document.querySelectorAll(selector).forEach(calculator => {
 
             EF.setupInputs(calculator);
 
             EF.setupReset(calculator);
 
+            EF.setupSharing(calculator);
+
             const button = calculator.querySelector(".ef-button");
 
             if (!button) return;
 
-            button.addEventListener("click", function () {
+            button.addEventListener("click", () => {
+
+                EF.hideAll(calculator);
 
                 const result = calculate(calculator);
 
                 if (!result) {
 
-                    showError(calculator);
+                    EF.showError(calculator);
 
                     return;
 
                 }
 
-                const error = calculator.querySelector(".ef-error");
+                calculator.querySelector(
 
-                if (error) error.style.display = "none";
+                    ".ef-error"
+
+                ).style.display = "none";
 
                 EF.showResults(calculator);
 
@@ -1234,91 +1067,53 @@
 
     }
 
-    function line(label, data, color, width) {
-
-        return {
-
-            label: label,
-
-            data: data,
-
-            borderColor: color,
-
-            borderWidth: width,
-
-            pointRadius: 0,
-
-            pointHoverRadius: 5,
-
-            pointHitRadius: 12,
-
-            tension: 0.25,
-
-            fill: false
-
-        };
-
-    }
-
-    setupCalculator(
+    setup(
 
         ".ef-interest-calculator",
 
-        function (calculator) {
+        calculator => {
 
-            const capital = getValue(calculator, ".ef-capital");
+            const result = EF.compound(
 
-            const monthly = getValue(calculator, ".ef-monthly");
+                value(calculator, ".ef-capital"),
 
-            const rate = getValue(calculator, ".ef-rate");
+                value(calculator, ".ef-monthly"),
 
-            const years = getValue(calculator, ".ef-years");
+                value(calculator, ".ef-rate"),
 
-            const frequency = parseInt(
+                value(calculator, ".ef-years"),
 
-                calculator.querySelector(".ef-frequency").value
+                parseInt(
+
+                    calculator.querySelector(
+
+                        ".ef-frequency"
+
+                    ).value
+
+                )
 
             );
 
             if (
 
-                isNaN(capital) ||
+                !Number.isFinite(result.final) ||
 
-                isNaN(monthly) ||
+                value(calculator, ".ef-capital") < 0 ||
 
-                isNaN(rate) ||
+                value(calculator, ".ef-monthly") < 0 ||
 
-                isNaN(years) ||
+                value(calculator, ".ef-rate") < 0 ||
 
-                capital < 0 ||
-
-                monthly < 0 ||
-
-                rate < 0 ||
-
-                years <= 0
+                value(calculator, ".ef-years") <= 0
 
             ) return null;
-
-            const result = EF.compound(
-
-                capital,
-
-                monthly,
-
-                rate,
-
-                years,
-
-                frequency
-
-            );
 
             return {
 
                 chart: result,
 
-                display: function (calculator) {
+                display: calculator => {
 
                     calculator.querySelector(
 
@@ -1346,11 +1141,7 @@
 
                         "Capital aportado",
 
-                        result.annualData.map(function (item) {
-
-                            return item.invested;
-
-                        }),
+                        result.annualData.map(x => x.invested),
 
                         "#8AAE6D",
 
@@ -1362,11 +1153,7 @@
 
                         "Intereses generados",
 
-                        result.annualData.map(function (item) {
-
-                            return item.interest;
-
-                        }),
+                        result.annualData.map(x => x.interest),
 
                         "#BC6B4A",
 
@@ -1378,11 +1165,7 @@
 
                         "Capital total",
 
-                        result.annualData.map(function (item) {
-
-                            return item.balance;
-
-                        }),
+                        result.annualData.map(x => x.balance),
 
                         "#3E5A3C",
 
@@ -1398,25 +1181,25 @@
 
     );
 
-    setupCalculator(
+    setup(
 
         ".ef-simple-interest-calculator",
 
-        function (calculator) {
+        calculator => {
 
-            const capital = getValue(calculator, ".ef-capital");
+            const capital = value(calculator, ".ef-capital");
 
-            const rate = getValue(calculator, ".ef-rate");
+            const rate = value(calculator, ".ef-rate");
 
-            const years = getValue(calculator, ".ef-years");
+            const years = value(calculator, ".ef-years");
 
             if (
 
-                isNaN(capital) ||
+                !Number.isFinite(capital) ||
 
-                isNaN(rate) ||
+                !Number.isFinite(rate) ||
 
-                isNaN(years) ||
+                !Number.isFinite(years) ||
 
                 capital < 0 ||
 
@@ -1432,7 +1215,7 @@
 
                 chart: result,
 
-                display: function (calculator) {
+                display: calculator => {
 
                     calculator.querySelector(
 
@@ -1460,11 +1243,7 @@
 
                         "Capital inicial",
 
-                        result.annualData.map(function (item) {
-
-                            return item.invested;
-
-                        }),
+                        result.annualData.map(x => x.invested),
 
                         "#8AAE6D",
 
@@ -1476,11 +1255,7 @@
 
                         "Intereses generados",
 
-                        result.annualData.map(function (item) {
-
-                            return item.interest;
-
-                        }),
+                        result.annualData.map(x => x.interest),
 
                         "#BC6B4A",
 
@@ -1492,11 +1267,7 @@
 
                         "Capital total",
 
-                        result.annualData.map(function (item) {
-
-                            return item.balance;
-
-                        }),
+                        result.annualData.map(x => x.balance),
 
                         "#3E5A3C",
 
@@ -1512,15 +1283,15 @@
 
     );
 
-    setupCalculator(
+    setup(
 
         ".ef-simple-savings-calculator",
 
-        function (calculator) {
+        calculator => {
 
-            const capital = getValue(calculator, ".ef-capital");
+            const capital = value(calculator, ".ef-capital");
 
-            const contribution = getValue(
+            const contribution = value(
 
                 calculator,
 
@@ -1528,25 +1299,21 @@
 
             );
 
-            const rate = getValue(calculator, ".ef-rate");
+            const rate = value(calculator, ".ef-rate");
 
-            const years = getValue(calculator, ".ef-years");
+            const years = value(calculator, ".ef-years");
 
             const frequency = parseInt(
 
-                calculator.querySelector(".ef-frequency").value
+                calculator.querySelector(
+
+                    ".ef-frequency"
+
+                ).value
 
             );
 
             if (
-
-                isNaN(capital) ||
-
-                isNaN(contribution) ||
-
-                isNaN(rate) ||
-
-                isNaN(years) ||
 
                 capital < 0 ||
 
@@ -1576,7 +1343,7 @@
 
                 chart: result,
 
-                display: function (calculator) {
+                display: calculator => {
 
                     calculator.querySelector(
 
@@ -1604,11 +1371,7 @@
 
                         "Capital aportado",
 
-                        result.annualData.map(function (item) {
-
-                            return item.invested;
-
-                        }),
+                        result.annualData.map(x => x.invested),
 
                         "#8AAE6D",
 
@@ -1620,11 +1383,7 @@
 
                         "Intereses generados",
 
-                        result.annualData.map(function (item) {
-
-                            return item.interest;
-
-                        }),
+                        result.annualData.map(x => x.interest),
 
                         "#BC6B4A",
 
@@ -1636,11 +1395,7 @@
 
                         "Capital total",
 
-                        result.annualData.map(function (item) {
-
-                            return item.balance;
-
-                        }),
+                        result.annualData.map(x => x.balance),
 
                         "#3E5A3C",
 
@@ -1656,25 +1411,19 @@
 
     );
 
-    setupCalculator(
+    setup(
 
         ".ef-mortgage-calculator",
 
-        function (calculator) {
+        calculator => {
 
-            const loan = getValue(calculator, ".ef-loan");
+            const loan = value(calculator, ".ef-loan");
 
-            const rate = getValue(calculator, ".ef-rate");
+            const rate = value(calculator, ".ef-rate");
 
-            const years = getValue(calculator, ".ef-years");
+            const years = value(calculator, ".ef-years");
 
             if (
-
-                isNaN(loan) ||
-
-                isNaN(rate) ||
-
-                isNaN(years) ||
 
                 loan <= 0 ||
 
@@ -1690,7 +1439,7 @@
 
                 chart: result,
 
-                display: function (calculator) {
+                display: calculator => {
 
                     calculator.querySelector(
 
@@ -1730,11 +1479,7 @@
 
                         "Deuda pendiente",
 
-                        result.annualData.map(function (item) {
-
-                            return item.balance;
-
-                        }),
+                        result.annualData.map(x => x.balance),
 
                         "#3E5A3C",
 
@@ -1746,11 +1491,7 @@
 
                         "Intereses acumulados",
 
-                        result.annualData.map(function (item) {
-
-                            return item.interest;
-
-                        }),
+                        result.annualData.map(x => x.interest),
 
                         "#BC6B4A",
 
@@ -1766,95 +1507,33 @@
 
     );
 
-    setupCalculator(
+    setup(
 
         ".ef-financial-independence-calculator",
 
-        function (calculator) {
-
-            const currentCapital = getValue(
-
-                calculator,
-
-                ".ef-current-capital"
-
-            );
-
-            const annualExpenses = getValue(
-
-                calculator,
-
-                ".ef-annual-expenses"
-
-            );
-
-            const monthlySavings = getValue(
-
-                calculator,
-
-                ".ef-monthly-savings"
-
-            );
-
-            const annualReturn = getValue(
-
-                calculator,
-
-                ".ef-annual-return"
-
-            );
-
-            const withdrawalRate = getValue(
-
-                calculator,
-
-                ".ef-withdrawal-rate"
-
-            );
-
-            if (
-
-                isNaN(currentCapital) ||
-
-                isNaN(annualExpenses) ||
-
-                isNaN(monthlySavings) ||
-
-                isNaN(annualReturn) ||
-
-                isNaN(withdrawalRate) ||
-
-                currentCapital < 0 ||
-
-                annualExpenses <= 0 ||
-
-                monthlySavings < 0 ||
-
-                annualReturn < 0 ||
-
-                withdrawalRate <= 0
-
-            ) return null;
+        calculator => {
 
             const result = EF.financialIndependence(
 
-                currentCapital,
+                value(calculator, ".ef-current-capital"),
 
-                annualExpenses,
+                value(calculator, ".ef-annual-expenses"),
 
-                monthlySavings,
+                value(calculator, ".ef-monthly-savings"),
 
-                annualReturn,
+                value(calculator, ".ef-annual-return"),
 
-                withdrawalRate
+                value(calculator, ".ef-withdrawal-rate")
 
             );
+
+            if (!Number.isFinite(result.target)) return null;
 
             return {
 
                 chart: result,
 
-                display: function (calculator) {
+                display: calculator => {
 
                     calculator.querySelector(
 
@@ -1880,7 +1559,11 @@
 
                         ".ef-fi-savings"
 
-                    ).textContent = EF.formatCurrency(monthlySavings);
+                    ).textContent = EF.formatCurrency(
+
+                        value(calculator, ".ef-monthly-savings")
+
+                    );
 
                 },
 
@@ -1890,11 +1573,7 @@
 
                         "Patrimonio acumulado",
 
-                        result.annualData.map(function (item) {
-
-                            return item.capital;
-
-                        }),
+                        result.annualData.map(x => x.capital),
 
                         "#3E5A3C",
 
@@ -1906,11 +1585,7 @@
 
                         "Capital objetivo",
 
-                        result.annualData.map(function (item) {
-
-                            return item.target;
-
-                        }),
+                        result.annualData.map(x => x.target),
 
                         "#BC6B4A",
 
@@ -1926,37 +1601,13 @@
 
     );
 
-    setupCalculator(
+    setup(
 
         ".ef-emergency-fund-calculator",
 
-        function (calculator) {
+        calculator => {
 
-            const monthlyExpenses = getValue(
-
-                calculator,
-
-                ".ef-monthly-expenses"
-
-            );
-
-            const coverageMonths = getValue(
-
-                calculator,
-
-                ".ef-coverage-months"
-
-            );
-
-            const currentSavings = getValue(
-
-                calculator,
-
-                ".ef-current-savings"
-
-            );
-
-            const monthlyContribution = getValue(
+            const contribution = value(
 
                 calculator,
 
@@ -1964,43 +1615,25 @@
 
             );
 
-            if (
-
-                isNaN(monthlyExpenses) ||
-
-                isNaN(coverageMonths) ||
-
-                isNaN(currentSavings) ||
-
-                isNaN(monthlyContribution) ||
-
-                monthlyExpenses <= 0 ||
-
-                coverageMonths <= 0 ||
-
-                currentSavings < 0 ||
-
-                monthlyContribution < 0
-
-            ) return null;
-
             const result = EF.emergencyFund(
 
-                monthlyExpenses,
+                value(calculator, ".ef-monthly-expenses"),
 
-                coverageMonths,
+                value(calculator, ".ef-coverage-months"),
 
-                currentSavings,
+                value(calculator, ".ef-current-savings"),
 
-                monthlyContribution
+                contribution
 
             );
+
+            if (!Number.isFinite(result.target)) return null;
 
             return {
 
                 chart: result,
 
-                display: function (calculator) {
+                display: calculator => {
 
                     calculator.querySelector(
 
@@ -2012,7 +1645,11 @@
 
                         ".ef-emergency-remaining"
 
-                    ).textContent = EF.formatCurrency(result.remaining);
+                    ).textContent = EF.formatCurrency(
+
+                        result.remaining
+
+                    );
 
                     calculator.querySelector(
 
@@ -2024,7 +1661,7 @@
 
                             ? "Objetivo alcanzado"
 
-                            : monthlyContribution === 0
+                            : contribution === 0
 
                                 ? "—"
 
@@ -2038,11 +1675,7 @@
 
                         "Fondo acumulado",
 
-                        result.annualData.map(function (item) {
-
-                            return item.capital;
-
-                        }),
+                        result.annualData.map(x => x.capital),
 
                         "#3E5A3C",
 
@@ -2054,11 +1687,7 @@
 
                         "Fondo recomendado",
 
-                        result.annualData.map(function (item) {
-
-                            return item.target;
-
-                        }),
+                        result.annualData.map(x => x.target),
 
                         "#BC6B4A",
 
@@ -2074,123 +1703,37 @@
 
     );
 
-    setupCalculator(
+    setup(
 
         ".ef-retirement-calculator",
 
-        function (calculator) {
-
-            const currentAge = getValue(
-
-                calculator,
-
-                ".ef-current-age"
-
-            );
-
-            const retirementAge = getValue(
-
-                calculator,
-
-                ".ef-retirement-age"
-
-            );
-
-            const currentSavings = getValue(
-
-                calculator,
-
-                ".ef-current-savings"
-
-            );
-
-            const monthlyContribution = getValue(
-
-                calculator,
-
-                ".ef-monthly-contribution"
-
-            );
-
-            const realReturn = getValue(
-
-                calculator,
-
-                ".ef-real-return"
-
-            );
-
-            const monthlyIncome = getValue(
-
-                calculator,
-
-                ".ef-retirement-income"
-
-            );
-
-            const retirementYears = getValue(
-
-                calculator,
-
-                ".ef-retirement-years"
-
-            );
-
-            if (
-
-                isNaN(currentAge) ||
-
-                isNaN(retirementAge) ||
-
-                isNaN(currentSavings) ||
-
-                isNaN(monthlyContribution) ||
-
-                isNaN(realReturn) ||
-
-                isNaN(monthlyIncome) ||
-
-                isNaN(retirementYears) ||
-
-                currentAge < 18 ||
-
-                retirementAge <= currentAge ||
-
-                currentSavings < 0 ||
-
-                monthlyContribution < 0 ||
-
-                realReturn < 0 ||
-
-                monthlyIncome <= 0 ||
-
-                retirementYears <= 0
-
-            ) return null;
+        calculator => {
 
             const result = EF.retirement(
 
-                currentAge,
+                value(calculator, ".ef-current-age"),
 
-                retirementAge,
+                value(calculator, ".ef-retirement-age"),
 
-                currentSavings,
+                value(calculator, ".ef-current-savings"),
 
-                monthlyContribution,
+                value(calculator, ".ef-monthly-contribution"),
 
-                realReturn,
+                value(calculator, ".ef-real-return"),
 
-                monthlyIncome,
+                value(calculator, ".ef-retirement-income"),
 
-                retirementYears
+                value(calculator, ".ef-retirement-years")
 
             );
+
+            if (!Number.isFinite(result.target)) return null;
 
             return {
 
                 chart: result,
 
-                display: function (calculator) {
+                display: calculator => {
 
                     calculator.querySelector(
 
@@ -2202,7 +1745,11 @@
 
                         ".ef-retirement-projected"
 
-                    ).textContent = EF.formatCurrency(result.projected);
+                    ).textContent = EF.formatCurrency(
+
+                        result.projected
+
+                    );
 
                     calculator.querySelector(
 
@@ -2222,11 +1769,7 @@
 
                         "Capital proyectado",
 
-                        result.annualData.map(function (item) {
-
-                            return item.capital;
-
-                        }),
+                        result.annualData.map(x => x.capital),
 
                         "#3E5A3C",
 
@@ -2238,11 +1781,7 @@
 
                         "Capital necesario",
 
-                        result.annualData.map(function (item) {
-
-                            return item.target;
-
-                        }),
+                        result.annualData.map(x => x.target),
 
                         "#BC6B4A",
 
@@ -2257,21 +1796,5 @@
         }
 
     );
-
-    document.querySelectorAll(".ef-calculator").forEach(function (calculator) {
-
-        EF.setupSharing(
-
-            calculator,
-
-            function () {
-
-                return "He calculado mi resultado financiero en el Vademécum Financiero.";
-
-            }
-
-        );
-
-    });
 
 })();
