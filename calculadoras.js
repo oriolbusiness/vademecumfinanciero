@@ -1,7 +1,11 @@
 (function () {
+
   "use strict";
 
-  if (window.EF && window.EF.__loaded) return;
+  if (window.EF && window.EF.__loaded) {
+    return;
+  }
+
   window.EF = window.EF || {};
   EF.__loaded = true;
 
@@ -18,20 +22,35 @@
   const EURO = {
     style: "currency",
     currency: "EUR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   };
 
-  const currency = value =>
-    Number(value).toLocaleString("es-ES", EURO);
+  function round2(value) {
+    return Math.round(
+      (Number(value) + Number.EPSILON) * 100
+    ) / 100;
+  }
 
-  const isPercent = input =>
-    PERCENT_CLASSES.some(className =>
-      input.classList.contains(className)
+  function currency(value) {
+    return round2(value).toLocaleString(
+      "es-ES",
+      EURO
     );
+  }
+
+  function isPercent(input) {
+    return PERCENT_CLASSES.some(
+      className =>
+        input.classList.contains(className)
+    );
+  }
 
   function parse(input) {
-    if (!input) return NaN;
+
+    if (!input) {
+      return NaN;
+    }
 
     let value = input.value.trim();
 
@@ -43,8 +62,11 @@
   }
 
   function formatInput(input) {
+
     if (isPercent(input)) {
-      let value = input.value.replace(/[^\d,]/g, "");
+
+      let value =
+        input.value.replace(/[^\d,]/g, "");
 
       const parts = value.split(",");
 
@@ -56,6 +78,7 @@
       }
 
       if (parts[1] !== undefined) {
+
         value =
           parts[0] +
           "," +
@@ -63,10 +86,12 @@
       }
 
       input.value = value;
+
       return;
     }
 
-    const value = input.value.replace(/\D/g, "");
+    const value =
+      input.value.replace(/\D/g, "");
 
     input.value = value
       ? value.replace(
@@ -77,38 +102,51 @@
   }
 
   function setupInputs(card) {
+
     card
       .querySelectorAll("input.ef-input")
       .forEach(input => {
-        input.addEventListener("input", function () {
-          const oldLength = this.value.length;
-          const position = this.selectionStart || 0;
 
-          formatInput(this);
+        input.addEventListener(
+          "input",
+          function () {
 
-          const newPosition = Math.max(
-            0,
-            position +
-              this.value.length -
-              oldLength
-          );
+            const oldLength =
+              this.value.length;
 
-          this.setSelectionRange(
-            newPosition,
-            newPosition
-          );
-        });
+            const position =
+              this.selectionStart || 0;
+
+            formatInput(this);
+
+            const newPosition =
+              Math.max(
+                0,
+                position +
+                  this.value.length -
+                  oldLength
+              );
+
+            this.setSelectionRange(
+              newPosition,
+              newPosition
+            );
+          }
+        );
       });
   }
 
   function hide(card) {
+
     [
       ".ef-results",
       ".ef-chart",
       ".ef-share",
       ".ef-reset"
     ].forEach(selector => {
-      const element = card.querySelector(selector);
+
+      const element =
+        card.querySelector(selector);
 
       if (element) {
         element.style.display = "none";
@@ -117,10 +155,21 @@
   }
 
   function show(card) {
-    const results = card.querySelector(".ef-results");
-    const chart = card.querySelector(".ef-chart");
-    const share = card.querySelector(".ef-share");
-    const reset = card.querySelector(".ef-reset");
+
+    const results =
+      card.querySelector(".ef-results");
+
+    const chart =
+      card.querySelector(".ef-chart");
+
+    const share =
+      card.querySelector(".ef-share");
+
+    const reset =
+      card.querySelector(".ef-reset");
+
+    const buttonGroup =
+      card.querySelector(".ef-button-group");
 
     if (results) {
       results.style.display = "grid";
@@ -134,15 +183,27 @@
       share.style.display = "block";
     }
 
+    if (buttonGroup) {
+
+      buttonGroup.style.display = "flex";
+      buttonGroup.style.alignItems = "center";
+      buttonGroup.style.gap = "12px";
+      buttonGroup.style.flexWrap = "nowrap";
+    }
+
     if (reset) {
       reset.style.display = "inline-flex";
     }
   }
 
   function showError(card, message) {
-    const error = card.querySelector(".ef-error");
 
-    if (!error) return;
+    const error =
+      card.querySelector(".ef-error");
+
+    if (!error) {
+      return;
+    }
 
     error.textContent =
       message ||
@@ -152,51 +213,67 @@
   }
 
   function clearError(card) {
-    const error = card.querySelector(".ef-error");
 
-    if (!error) return;
+    const error =
+      card.querySelector(".ef-error");
+
+    if (!error) {
+      return;
+    }
 
     error.textContent = "";
     error.style.display = "none";
   }
 
   function setupReset(card) {
-    const reset = card.querySelector(".ef-reset");
 
-    if (!reset || reset.dataset.efReady) {
+    const reset =
+      card.querySelector(".ef-reset");
+
+    if (
+      !reset ||
+      reset.dataset.efReady
+    ) {
       return;
     }
 
     reset.dataset.efReady = "1";
 
-    reset.addEventListener("click", () => {
-      card
-        .querySelectorAll("input")
-        .forEach(input => {
-          input.value = "";
-        });
+    reset.addEventListener(
+      "click",
+      () => {
 
-      card
-        .querySelectorAll("select")
-        .forEach(select => {
-          select.selectedIndex = 0;
-        });
+        card
+          .querySelectorAll("input")
+          .forEach(input => {
+            input.value = "";
+          });
 
-      clearError(card);
-      hide(card);
+        card
+          .querySelectorAll("select")
+          .forEach(select => {
+            select.selectedIndex = 0;
+          });
 
-      if (card._efChart) {
-        card._efChart.destroy();
-        card._efChart = null;
+        clearError(card);
+        hide(card);
+
+        if (card._efChart) {
+
+          card._efChart.destroy();
+          card._efChart = null;
+        }
+
+        const feedback =
+          card.querySelector(
+            ".ef-share-feedback"
+          );
+
+        if (feedback) {
+          feedback.textContent = "";
+        }
       }
-
-      const feedback =
-        card.querySelector(".ef-share-feedback");
-
-      if (feedback) {
-        feedback.textContent = "";
-      }
-    });
+    );
   }
 
   function createLine(
@@ -205,14 +282,22 @@
     borderColor,
     borderWidth
   ) {
+
     return {
+
       label,
-      data,
+
+      data: data.map(value =>
+        round2(value)
+      ),
+
       borderColor,
       borderWidth,
+
       pointRadius: 0,
       pointHoverRadius: 5,
       pointHitRadius: 12,
+
       tension: 0.25,
       fill: false
     };
@@ -223,91 +308,121 @@
     result,
     datasets
   ) {
-    if (!window.Chart) return;
+
+    if (!window.Chart) {
+      return;
+    }
 
     const canvas =
-      card.querySelector(".ef-chart-canvas");
+      card.querySelector(
+        ".ef-chart-canvas"
+      );
 
-    if (!canvas) return;
+    if (!canvas) {
+      return;
+    }
 
     if (card._efChart) {
       card._efChart.destroy();
     }
 
-    card._efChart = new Chart(canvas, {
-      type: "line",
+    card._efChart =
+      new Chart(canvas, {
 
-      data: {
-        labels: result.annualData.map(
-          item => item.year
-        ),
+        type: "line",
 
-        datasets
-      },
+        data: {
 
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
+          labels:
+            result.annualData.map(
+              item => round2(item.year)
+            ),
 
-        interaction: {
-          mode: "index",
-          intersect: false
+          datasets
         },
 
-        plugins: {
-          legend: {
-            position: "bottom",
+        options: {
 
-            labels: {
-              usePointStyle: true,
-              pointStyle: "circle",
-              boxWidth: 8,
-              boxHeight: 8,
-              padding: 20,
+          responsive: true,
+          maintainAspectRatio: false,
 
-              font: {
-                family: "Nunito Sans"
+          interaction: {
+            mode: "index",
+            intersect: false
+          },
+
+          plugins: {
+
+            legend: {
+
+              position: "bottom",
+
+              labels: {
+
+                usePointStyle: true,
+                pointStyle: "circle",
+
+                boxWidth: 8,
+                boxHeight: 8,
+                padding: 20,
+
+                font: {
+                  family: "Nunito Sans"
+                }
+              }
+            },
+
+            tooltip: {
+
+              callbacks: {
+
+                label: context =>
+                  `${context.dataset.label}: ${currency(
+                    context.parsed.y
+                  )}`
               }
             }
           },
 
-          tooltip: {
-            callbacks: {
-              label: context =>
-                `${context.dataset.label}: ${currency(
-                  context.parsed.y
-                )}`
-            }
-          }
-        },
+          scales: {
 
-        scales: {
-          x: {
-            ticks: {
-              font: {
-                family: "Nunito Sans"
+            x: {
+
+              ticks: {
+
+                font: {
+                  family: "Nunito Sans"
+                },
+
+                callback: value =>
+                  round2(value)
               }
-            }
-          },
+            },
 
-          y: {
-            beginAtZero: true,
+            y: {
 
-            ticks: {
-              font: {
-                family: "Nunito Sans"
-              },
+              beginAtZero: true,
 
-              callback: value =>
-                currency(value)
+              ticks: {
+
+                font: {
+                  family: "Nunito Sans"
+                },
+
+                callback: value =>
+                  currency(value)
+              }
             }
           }
         }
-      }
-    });
+      });
   }
 
-  function setupSharing(card, getText) {
+  function setupSharing(
+    card,
+    getText
+  ) {
+
     if (card.dataset.efShareReady) {
       return;
     }
@@ -315,17 +430,26 @@
     card.dataset.efShareReady = "1";
 
     const feedback =
-      card.querySelector(".ef-share-feedback");
+      card.querySelector(
+        ".ef-share-feedback"
+      );
 
-    const open = url =>
+    const open = url => {
+
       window.open(
         url,
         "_blank",
         "noopener,noreferrer"
       );
+    };
 
-    const bind = (selector, callback) => {
-      const element = card.querySelector(selector);
+    const bind = (
+      selector,
+      callback
+    ) => {
+
+      const element =
+        card.querySelector(selector);
 
       if (element) {
         element.addEventListener(
@@ -338,9 +462,12 @@
     bind(
       ".ef-share-whatsapp",
       () => {
+
         open(
           "https://wa.me/?text=" +
-            encodeURIComponent(getText())
+            encodeURIComponent(
+              getText()
+            )
         );
       }
     );
@@ -348,11 +475,16 @@
     bind(
       ".ef-share-telegram",
       () => {
+
         open(
           "https://t.me/share/url?url=" +
-            encodeURIComponent(location.href) +
+            encodeURIComponent(
+              location.href
+            ) +
             "&text=" +
-            encodeURIComponent(getText())
+            encodeURIComponent(
+              getText()
+            )
         );
       }
     );
@@ -360,9 +492,12 @@
     bind(
       ".ef-share-facebook",
       () => {
+
         open(
           "https://www.facebook.com/sharer/sharer.php?u=" +
-            encodeURIComponent(location.href)
+            encodeURIComponent(
+              location.href
+            )
         );
       }
     );
@@ -370,11 +505,16 @@
     bind(
       ".ef-share-x",
       () => {
+
         open(
           "https://twitter.com/intent/tweet?text=" +
-            encodeURIComponent(getText()) +
+            encodeURIComponent(
+              getText()
+            ) +
             "&url=" +
-            encodeURIComponent(location.href)
+            encodeURIComponent(
+              location.href
+            )
         );
       }
     );
@@ -382,7 +522,9 @@
     bind(
       ".ef-share-copy",
       async () => {
+
         try {
+
           await navigator.clipboard.writeText(
             getText()
           );
@@ -391,7 +533,9 @@
             feedback.textContent =
               "Resultado copiado al portapapeles.";
           }
+
         } catch (error) {
+
           if (feedback) {
             feedback.textContent =
               "No se ha podido copiar el resultado.";
@@ -408,13 +552,18 @@
     years,
     frequency
   ) {
+
     let balance = capital;
     let interest = 0;
 
-    const monthsPerPeriod = 12 / frequency;
+    const monthsPerPeriod =
+      12 / frequency;
+
     const periodRate =
       rate / 100 / frequency;
-    const totalMonths = years * 12;
+
+    const totalMonths =
+      years * 12;
 
     const annualData = [
       {
@@ -430,9 +579,13 @@
       month <= totalMonths;
       month++
     ) {
+
       balance += monthly;
 
-      if (month % monthsPerPeriod === 0) {
+      if (
+        month % monthsPerPeriod === 0
+      ) {
+
         const gain =
           balance * periodRate;
 
@@ -441,19 +594,28 @@
       }
 
       if (month % 12 === 0) {
+
         annualData.push({
+
           year: month / 12,
+
           invested:
-            capital + monthly * month,
+            capital +
+            monthly * month,
+
           interest,
+
           balance
         });
       }
     }
 
     return {
+
       invested:
-        capital + monthly * totalMonths,
+        capital +
+        monthly * totalMonths,
+
       interest,
       final: balance,
       annualData
@@ -465,6 +627,7 @@
     rate,
     years
   ) {
+
     const annualInterest =
       capital * rate / 100;
 
@@ -475,11 +638,16 @@
       year <= years;
       year++
     ) {
+
       annualData.push({
+
         year,
+
         invested: capital,
+
         interest:
           annualInterest * year,
+
         balance:
           capital +
           annualInterest * year
@@ -487,12 +655,16 @@
     }
 
     return {
+
       invested: capital,
+
       interest:
         annualInterest * years,
+
       final:
         capital +
         annualInterest * years,
+
       annualData
     };
   }
@@ -504,6 +676,7 @@
     years,
     frequency
   ) {
+
     const periods =
       years * frequency;
 
@@ -532,6 +705,7 @@
       period <= periods;
       period++
     ) {
+
       interest +=
         contribution *
         periodRate *
@@ -539,22 +713,36 @@
 
       invested += contribution;
 
-      if (period % frequency === 0) {
+      if (
+        period % frequency === 0
+      ) {
+
         annualData.push({
-          year: period / frequency,
+
+          year:
+            period / frequency,
+
           invested,
+
           interest,
+
           balance:
-            invested + interest
+            invested +
+            interest
         });
       }
     }
 
     return {
+
       invested,
+
       interest,
+
       final:
-        invested + interest,
+        invested +
+        interest,
+
       annualData
     };
   }
@@ -564,10 +752,12 @@
     rate,
     years
   ) {
+
     const monthlyRate =
       rate / 100 / 12;
 
-    const months = years * 12;
+    const months =
+      years * 12;
 
     const payment =
       monthlyRate === 0
@@ -603,26 +793,41 @@
       month <= months;
       month++
     ) {
+
       const gain =
         balance * monthlyRate;
 
-      balance -= payment - gain;
+      balance -=
+        payment - gain;
+
       interest += gain;
 
       if (month % 12 === 0) {
+
         annualData.push({
+
           year: month / 12,
+
           balance:
-            Math.max(balance, 0),
+            Math.max(
+              balance,
+              0
+            ),
+
           interest
         });
       }
     }
 
     return {
+
       monthlyPayment: payment,
+
       totalInterest: interest,
-      totalPaid: loan + interest,
+
+      totalPaid:
+        loan + interest,
+
       annualData
     };
   }
@@ -634,6 +839,7 @@
     returnRate,
     withdrawal
   ) {
+
     const target =
       expenses /
       (withdrawal / 100);
@@ -659,6 +865,7 @@
       capital < target &&
       months < 1200
     ) {
+
       capital =
         capital *
         (1 + monthlyReturn) +
@@ -667,9 +874,13 @@
       months++;
 
       if (months % 12 === 0) {
+
         annualData.push({
+
           year: months / 12,
+
           capital,
+
           target
         });
       }
@@ -679,17 +890,26 @@
       months % 12 !== 0 &&
       capital >= target
     ) {
+
       annualData.push({
+
         year: months / 12,
+
         capital,
+
         target
       });
     }
 
     return {
+
       target,
-      years: months / 12,
+
+      years:
+        months / 12,
+
       annualData,
+
       reached:
         capital >= target
     };
@@ -701,6 +921,7 @@
     current,
     contribution
   ) {
+
     const target =
       expenses * coverage;
 
@@ -726,17 +947,22 @@
       contribution > 0 &&
       months < 1200
     ) {
+
       capital += contribution;
       months++;
 
       if (months % 12 === 0) {
+
         annualData.push({
+
           year: months / 12,
+
           capital:
             Math.min(
               capital,
               target
             ),
+
           target
         });
       }
@@ -746,18 +972,24 @@
       months % 12 !== 0 &&
       capital >= target
     ) {
+
       annualData.push({
+
         year: months / 12,
+
         capital: target,
+
         target
       });
     }
 
     return {
+
       target,
       remaining,
       months,
       annualData,
+
       reached:
         capital >= target
     };
@@ -772,6 +1004,7 @@
     income,
     retirementYears
   ) {
+
     const years =
       retirementAge - age;
 
@@ -812,25 +1045,34 @@
       month <= years * 12;
       month++
     ) {
+
       projected =
         projected *
         (1 + monthlyRate) +
         contribution;
 
       if (month % 12 === 0) {
+
         annualData.push({
+
           year: month / 12,
+
           capital: projected,
+
           target
         });
       }
     }
 
     return {
+
       target,
+
       projected,
+
       difference:
         projected - target,
+
       annualData
     };
   }
@@ -839,6 +1081,7 @@
     card,
     calculate
   ) {
+
     if (card.dataset.efReady) {
       return;
     }
@@ -859,33 +1102,44 @@
     const button =
       card.querySelector(".ef-button");
 
-    if (!button) return;
+    if (!button) {
+      return;
+    }
 
     button.addEventListener(
       "click",
       () => {
+
         clearError(card);
 
         let result;
 
         try {
-          result = calculate(card);
+
+          result =
+            calculate(card);
+
         } catch (error) {
+
           console.error(
             "Error en calculadora financiera:",
             error
           );
 
           showError(card);
+
           return;
         }
 
         if (!result) {
+
           showError(card);
+
           return;
         }
 
-        shareText = result.shareText;
+        shareText =
+          result.shareText;
 
         show(card);
 
@@ -907,29 +1161,44 @@
         ".ef-interest-calculator"
       )
       .forEach(card => {
+
         initCard(card, card => {
-          const capital = parse(
-            card.querySelector(".ef-capital")
-          );
 
-          const monthly = parse(
-            card.querySelector(".ef-monthly")
-          );
+          const capital =
+            parse(
+              card.querySelector(
+                ".ef-capital"
+              )
+            );
 
-          const rate = parse(
-            card.querySelector(".ef-rate")
-          );
+          const monthly =
+            parse(
+              card.querySelector(
+                ".ef-monthly"
+              )
+            );
 
-          const years = parse(
-            card.querySelector(".ef-years")
-          );
+          const rate =
+            parse(
+              card.querySelector(
+                ".ef-rate"
+              )
+            );
 
-          const frequency = parseInt(
-            card.querySelector(
-              ".ef-frequency"
-            ).value,
-            10
-          );
+          const years =
+            parse(
+              card.querySelector(
+                ".ef-years"
+              )
+            );
+
+          const frequency =
+            parseInt(
+              card.querySelector(
+                ".ef-frequency"
+              ).value,
+              10
+            );
 
           if (
             ![
@@ -946,18 +1215,21 @@
             return null;
           }
 
-          const result = compound(
-            capital,
-            monthly,
-            rate,
-            years,
-            frequency
-          );
+          const result =
+            compound(
+              capital,
+              monthly,
+              rate,
+              years,
+              frequency
+            );
 
           return {
+
             ...result,
 
             datasets: [
+
               createLine(
                 "Capital aportado",
                 result.annualData.map(
@@ -987,20 +1259,27 @@
             ],
 
             display: () => {
+
               card.querySelector(
                 ".ef-final-balance"
               ).textContent =
-                currency(result.final);
+                currency(
+                  result.final
+                );
 
               card.querySelector(
                 ".ef-total-invested"
               ).textContent =
-                currency(result.invested);
+                currency(
+                  result.invested
+                );
 
               card.querySelector(
                 ".ef-total-interest"
               ).textContent =
-                currency(result.interest);
+                currency(
+                  result.interest
+                );
             },
 
             shareText:
@@ -1016,18 +1295,29 @@
         ".ef-simple-interest-calculator"
       )
       .forEach(card => {
+
         initCard(card, card => {
-          const capital = parse(
-            card.querySelector(".ef-capital")
-          );
 
-          const rate = parse(
-            card.querySelector(".ef-rate")
-          );
+          const capital =
+            parse(
+              card.querySelector(
+                ".ef-capital"
+              )
+            );
 
-          const years = parse(
-            card.querySelector(".ef-years")
-          );
+          const rate =
+            parse(
+              card.querySelector(
+                ".ef-rate"
+              )
+            );
+
+          const years =
+            parse(
+              card.querySelector(
+                ".ef-years"
+              )
+            );
 
           if (
             ![
@@ -1042,16 +1332,19 @@
             return null;
           }
 
-          const result = simple(
-            capital,
-            rate,
-            years
-          );
+          const result =
+            simple(
+              capital,
+              rate,
+              years
+            );
 
           return {
+
             ...result,
 
             datasets: [
+
               createLine(
                 "Capital inicial",
                 result.annualData.map(
@@ -1081,20 +1374,27 @@
             ],
 
             display: () => {
+
               card.querySelector(
                 ".ef-final-balance"
               ).textContent =
-                currency(result.final);
+                currency(
+                  result.final
+                );
 
               card.querySelector(
                 ".ef-total-invested"
               ).textContent =
-                currency(result.invested);
+                currency(
+                  result.invested
+                );
 
               card.querySelector(
                 ".ef-total-interest"
               ).textContent =
-                currency(result.interest);
+                currency(
+                  result.interest
+                );
             },
 
             shareText:
@@ -1110,31 +1410,44 @@
         ".ef-simple-savings-calculator"
       )
       .forEach(card => {
+
         initCard(card, card => {
-          const capital = parse(
-            card.querySelector(".ef-capital")
-          );
 
-          const contribution = parse(
-            card.querySelector(
-              ".ef-contribution"
-            )
-          );
+          const capital =
+            parse(
+              card.querySelector(
+                ".ef-capital"
+              )
+            );
 
-          const rate = parse(
-            card.querySelector(".ef-rate")
-          );
+          const contribution =
+            parse(
+              card.querySelector(
+                ".ef-contribution"
+              )
+            );
 
-          const years = parse(
-            card.querySelector(".ef-years")
-          );
+          const rate =
+            parse(
+              card.querySelector(
+                ".ef-rate"
+              )
+            );
 
-          const frequency = parseInt(
-            card.querySelector(
-              ".ef-frequency"
-            ).value,
-            10
-          );
+          const years =
+            parse(
+              card.querySelector(
+                ".ef-years"
+              )
+            );
+
+          const frequency =
+            parseInt(
+              card.querySelector(
+                ".ef-frequency"
+              ).value,
+              10
+            );
 
           if (
             ![
@@ -1151,18 +1464,21 @@
             return null;
           }
 
-          const result = simpleSavings(
-            capital,
-            contribution,
-            rate,
-            years,
-            frequency
-          );
+          const result =
+            simpleSavings(
+              capital,
+              contribution,
+              rate,
+              years,
+              frequency
+            );
 
           return {
+
             ...result,
 
             datasets: [
+
               createLine(
                 "Capital aportado",
                 result.annualData.map(
@@ -1192,20 +1508,27 @@
             ],
 
             display: () => {
+
               card.querySelector(
                 ".ef-final-balance"
               ).textContent =
-                currency(result.final);
+                currency(
+                  result.final
+                );
 
               card.querySelector(
                 ".ef-total-invested"
               ).textContent =
-                currency(result.invested);
+                currency(
+                  result.invested
+                );
 
               card.querySelector(
                 ".ef-total-interest"
               ).textContent =
-                currency(result.interest);
+                currency(
+                  result.interest
+                );
             },
 
             shareText:
@@ -1221,18 +1544,29 @@
         ".ef-mortgage-calculator"
       )
       .forEach(card => {
+
         initCard(card, card => {
-          const loan = parse(
-            card.querySelector(".ef-loan")
-          );
 
-          const rate = parse(
-            card.querySelector(".ef-rate")
-          );
+          const loan =
+            parse(
+              card.querySelector(
+                ".ef-loan"
+              )
+            );
 
-          const years = parse(
-            card.querySelector(".ef-years")
-          );
+          const rate =
+            parse(
+              card.querySelector(
+                ".ef-rate"
+              )
+            );
+
+          const years =
+            parse(
+              card.querySelector(
+                ".ef-years"
+              )
+            );
 
           if (
             ![
@@ -1247,16 +1581,19 @@
             return null;
           }
 
-          const result = mortgage(
-            loan,
-            rate,
-            years
-          );
+          const result =
+            mortgage(
+              loan,
+              rate,
+              years
+            );
 
           return {
+
             ...result,
 
             datasets: [
+
               createLine(
                 "Deuda pendiente",
                 result.annualData.map(
@@ -1277,6 +1614,7 @@
             ],
 
             display: () => {
+
               card.querySelector(
                 ".ef-monthly-payment"
               ).textContent =
@@ -1312,36 +1650,43 @@
         ".ef-financial-independence-calculator"
       )
       .forEach(card => {
+
         initCard(card, card => {
-          const current = parse(
-            card.querySelector(
-              ".ef-current-capital"
-            )
-          );
 
-          const expenses = parse(
-            card.querySelector(
-              ".ef-annual-expenses"
-            )
-          );
+          const current =
+            parse(
+              card.querySelector(
+                ".ef-current-capital"
+              )
+            );
 
-          const savings = parse(
-            card.querySelector(
-              ".ef-monthly-savings"
-            )
-          );
+          const expenses =
+            parse(
+              card.querySelector(
+                ".ef-annual-expenses"
+              )
+            );
 
-          const returnRate = parse(
-            card.querySelector(
-              ".ef-annual-return"
-            )
-          );
+          const savings =
+            parse(
+              card.querySelector(
+                ".ef-monthly-savings"
+              )
+            );
 
-          const withdrawal = parse(
-            card.querySelector(
-              ".ef-withdrawal-rate"
-            )
-          );
+          const returnRate =
+            parse(
+              card.querySelector(
+                ".ef-annual-return"
+              )
+            );
+
+          const withdrawal =
+            parse(
+              card.querySelector(
+                ".ef-withdrawal-rate"
+              )
+            );
 
           if (
             ![
@@ -1380,9 +1725,11 @@
           }
 
           return {
+
             ...result,
 
             datasets: [
+
               createLine(
                 "Patrimonio acumulado",
                 result.annualData.map(
@@ -1403,34 +1750,43 @@
             ],
 
             display: () => {
+
               card.querySelector(
                 ".ef-fi-target"
               ).textContent =
-                currency(result.target);
+                currency(
+                  result.target
+                );
 
               card.querySelector(
                 ".ef-fi-years"
               ).textContent =
-                `${result.years.toLocaleString(
+                `${round2(
+                  result.years
+                ).toLocaleString(
                   "es-ES",
                   {
-                    minimumFractionDigits: 1,
-                    maximumFractionDigits: 1
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
                   }
                 )} años`;
 
               card.querySelector(
                 ".ef-fi-savings"
               ).textContent =
-                currency(savings);
+                currency(
+                  savings
+                );
             },
 
             shareText:
-              `He calculado que alcanzaría la independencia financiera en aproximadamente ${result.years.toLocaleString(
+              `He calculado que alcanzaría la independencia financiera en aproximadamente ${round2(
+                result.years
+              ).toLocaleString(
                 "es-ES",
                 {
-                  minimumFractionDigits: 1,
-                  maximumFractionDigits: 1
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
                 }
               )} años con el Vademécum Financiero.`
           };
@@ -1442,30 +1798,36 @@
         ".ef-emergency-fund-calculator"
       )
       .forEach(card => {
+
         initCard(card, card => {
-          const expenses = parse(
-            card.querySelector(
-              ".ef-monthly-expenses"
-            )
-          );
 
-          const coverage = parse(
-            card.querySelector(
-              ".ef-coverage-months"
-            )
-          );
+          const expenses =
+            parse(
+              card.querySelector(
+                ".ef-monthly-expenses"
+              )
+            );
 
-          const current = parse(
-            card.querySelector(
-              ".ef-current-savings"
-            )
-          );
+          const coverage =
+            parse(
+              card.querySelector(
+                ".ef-coverage-months"
+              )
+            );
 
-          const contribution = parse(
-            card.querySelector(
-              ".ef-monthly-contribution"
-            )
-          );
+          const current =
+            parse(
+              card.querySelector(
+                ".ef-current-savings"
+              )
+            );
+
+          const contribution =
+            parse(
+              card.querySelector(
+                ".ef-monthly-contribution"
+              )
+            );
 
           if (
             ![
@@ -1482,17 +1844,20 @@
             return null;
           }
 
-          const result = emergency(
-            expenses,
-            coverage,
-            current,
-            contribution
-          );
+          const result =
+            emergency(
+              expenses,
+              coverage,
+              current,
+              contribution
+            );
 
           return {
+
             ...result,
 
             datasets: [
+
               createLine(
                 "Fondo acumulado",
                 result.annualData.map(
@@ -1513,15 +1878,20 @@
             ],
 
             display: () => {
+
               card.querySelector(
                 ".ef-emergency-target"
               ).textContent =
-                currency(result.target);
+                currency(
+                  result.target
+                );
 
               card.querySelector(
                 ".ef-emergency-remaining"
               ).textContent =
-                currency(result.remaining);
+                currency(
+                  result.remaining
+                );
 
               card.querySelector(
                 ".ef-emergency-time"
@@ -1546,48 +1916,57 @@
         ".ef-retirement-calculator"
       )
       .forEach(card => {
+
         initCard(card, card => {
-          const age = parse(
-            card.querySelector(
-              ".ef-current-age"
-            )
-          );
 
-          const retirementAge = parse(
-            card.querySelector(
-              ".ef-retirement-age"
-            )
-          );
+          const age =
+            parse(
+              card.querySelector(
+                ".ef-current-age"
+              )
+            );
 
-          const savings = parse(
-            card.querySelector(
-              ".ef-current-savings"
-            )
-          );
+          const retirementAge =
+            parse(
+              card.querySelector(
+                ".ef-retirement-age"
+              )
+            );
 
-          const contribution = parse(
-            card.querySelector(
-              ".ef-monthly-contribution"
-            )
-          );
+          const savings =
+            parse(
+              card.querySelector(
+                ".ef-current-savings"
+              )
+            );
 
-          const realReturn = parse(
-            card.querySelector(
-              ".ef-real-return"
-            )
-          );
+          const contribution =
+            parse(
+              card.querySelector(
+                ".ef-monthly-contribution"
+              )
+            );
 
-          const income = parse(
-            card.querySelector(
-              ".ef-retirement-income"
-            )
-          );
+          const realReturn =
+            parse(
+              card.querySelector(
+                ".ef-real-return"
+              )
+            );
 
-          const retirementYears = parse(
-            card.querySelector(
-              ".ef-retirement-years"
-            )
-          );
+          const income =
+            parse(
+              card.querySelector(
+                ".ef-retirement-income"
+              )
+            );
+
+          const retirementYears =
+            parse(
+              card.querySelector(
+                ".ef-retirement-years"
+              )
+            );
 
           if (
             ![
@@ -1610,20 +1989,23 @@
             return null;
           }
 
-          const result = retirement(
-            age,
-            retirementAge,
-            savings,
-            contribution,
-            realReturn,
-            income,
-            retirementYears
-          );
+          const result =
+            retirement(
+              age,
+              retirementAge,
+              savings,
+              contribution,
+              realReturn,
+              income,
+              retirementYears
+            );
 
           return {
+
             ...result,
 
             datasets: [
+
               createLine(
                 "Capital proyectado",
                 result.annualData.map(
@@ -1644,20 +2026,27 @@
             ],
 
             display: () => {
+
               card.querySelector(
                 ".ef-retirement-target"
               ).textContent =
-                currency(result.target);
+                currency(
+                  result.target
+                );
 
               card.querySelector(
                 ".ef-retirement-projected"
               ).textContent =
-                currency(result.projected);
+                currency(
+                  result.projected
+                );
 
               card.querySelector(
                 ".ef-retirement-difference"
               ).textContent =
-                currency(result.difference);
+                currency(
+                  result.difference
+                );
             },
 
             shareText:
@@ -1668,8 +2057,11 @@
   }
 
   function loadChart() {
+
     if (window.Chart) {
+
       setupAll();
+
       return;
     }
 
@@ -1678,26 +2070,33 @@
 
     script.src = CHART_URL;
 
-    script.onload = setupAll;
+    script.onload =
+      setupAll;
 
     script.onerror = () => {
+
       console.error(
         "No se pudo cargar Chart.js."
       );
     };
 
-    document.head.appendChild(script);
+    document.head.appendChild(
+      script
+    );
   }
 
   if (
     document.readyState ===
     "loading"
   ) {
+
     document.addEventListener(
       "DOMContentLoaded",
       loadChart
     );
+
   } else {
+
     loadChart();
   }
 
