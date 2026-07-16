@@ -65,16 +65,62 @@
 
   EF.parseNumber = function (input) {
 
-    const value =
-      input.value
-        .replace(/\./g, "")
-        .replace(",", ".");
+    let value = input.value.trim();
+
+    if (
+      input.classList.contains("ef-rate") ||
+      input.classList.contains("ef-annual-return") ||
+      input.classList.contains("ef-withdrawal-rate") ||
+      input.classList.contains("ef-real-return")
+    ) {
+
+      value = value.replace(",", ".");
+
+    } else {
+
+      value = value.replace(/\./g, "");
+
+    }
 
     return parseFloat(value);
 
   };
 
-  EF.formatInput = function (value) {
+  EF.formatInput = function (value, input) {
+
+    if (
+      input.classList.contains("ef-rate") ||
+      input.classList.contains("ef-annual-return") ||
+      input.classList.contains("ef-withdrawal-rate") ||
+      input.classList.contains("ef-real-return")
+    ) {
+
+      let clean = value.replace(/[^\d,]/g, "");
+
+      const parts = clean.split(",");
+
+      if (parts.length > 2) {
+
+        clean =
+          parts[0] +
+          "," +
+          parts.slice(1).join("");
+
+      }
+
+      if (parts[1] !== undefined) {
+
+        return (
+          parts[0] +
+          "," +
+          parts[1].slice(0, 2)
+        );
+
+      }
+
+      return clean;
+
+    }
 
     const clean =
       value.replace(/\D/g, "");
@@ -116,7 +162,8 @@
 
             this.value =
               EF.formatInput(
-                this.value
+                this.value,
+                this
               );
 
             const newLength =
@@ -417,7 +464,32 @@
       result.annualData.map(
         function (item) {
 
-          return item.year;
+          return EF.round2(
+            item.year
+          );
+
+        }
+      );
+
+    const roundedDatasets =
+      datasets.map(
+        function (dataset) {
+
+          return {
+
+            ...dataset,
+
+            data: dataset.data.map(
+              function (value) {
+
+                return EF.round2(
+                  value
+                );
+
+              }
+            )
+
+          };
 
         }
       );
@@ -433,7 +505,7 @@
 
             labels: labels,
 
-            datasets: datasets
+            datasets: roundedDatasets
 
           },
 
@@ -1295,6 +1367,54 @@
       annualData:
         EF.roundAnnualData(
           annualData
+        )
+
+    };
+
+  };
+
+  EF.netWorth = function (
+    cash,
+    investments,
+    property,
+    otherAssets,
+    mortgageDebt,
+    loans,
+    creditCardDebt,
+    otherDebts
+  ) {
+
+    const totalAssets =
+      cash +
+      investments +
+      property +
+      otherAssets;
+
+    const totalDebts =
+      mortgageDebt +
+      loans +
+      creditCardDebt +
+      otherDebts;
+
+    const netWorth =
+      totalAssets -
+      totalDebts;
+
+    return {
+
+      assets:
+        EF.round2(
+          totalAssets
+        ),
+
+      debts:
+        EF.round2(
+          totalDebts
+        ),
+
+      netWorth:
+        EF.round2(
+          netWorth
         )
 
     };
