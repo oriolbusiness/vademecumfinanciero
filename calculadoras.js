@@ -2,550 +2,605 @@
 
   "use strict";
 
-  if (window.EF && window.EF.__loaded) {
-    return;
-  }
-
   window.EF = window.EF || {};
-  EF.__loaded = true;
 
-  const CHART_URL =
-    "https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js";
+  EF.round2 = function (value) {
 
-  const PERCENT_CLASSES = [
-    "ef-rate",
-    "ef-annual-return",
-    "ef-withdrawal-rate",
-    "ef-real-return"
-  ];
-
-  const EURO = {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  };
-
-  function round2(value) {
     return Math.round(
       (Number(value) + Number.EPSILON) * 100
     ) / 100;
-  }
 
-  function currency(value) {
-    return round2(value).toLocaleString(
+  };
+
+  EF.formatCurrency = function (value) {
+
+    return EF.round2(value).toLocaleString(
       "es-ES",
-      EURO
+      {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }
     );
-  }
 
-  function isPercent(input) {
-    return PERCENT_CLASSES.some(
-      className =>
-        input.classList.contains(className)
-    );
-  }
+  };
 
-  function parse(input) {
-
-    if (!input) {
-      return NaN;
-    }
+  EF.parseNumber = function (input) {
 
     let value = input.value.trim();
 
-    value = isPercent(input)
-      ? value.replace(",", ".")
-      : value.replace(/\./g, "");
+    if (
+      input.classList.contains("ef-rate") ||
+      input.classList.contains("ef-annual-return") ||
+      input.classList.contains("ef-withdrawal-rate") ||
+      input.classList.contains("ef-real-return")
+    ) {
+
+      value = value.replace(",", ".");
+
+    } else {
+
+      value = value.replace(/\./g, "");
+
+    }
 
     return parseFloat(value);
-  }
 
-  function formatInput(input) {
+  };
 
-    if (isPercent(input)) {
+  EF.formatInput = function (value, input) {
 
-      let value =
-        input.value.replace(/[^\d,]/g, "");
+    if (
+      input.classList.contains("ef-rate") ||
+      input.classList.contains("ef-annual-return") ||
+      input.classList.contains("ef-withdrawal-rate") ||
+      input.classList.contains("ef-real-return")
+    ) {
 
-      const parts = value.split(",");
+      let clean = value.replace(/[^\d,]/g, "");
+
+      const parts = clean.split(",");
 
       if (parts.length > 2) {
-        value =
+
+        clean =
           parts[0] +
           "," +
           parts.slice(1).join("");
+
       }
 
       if (parts[1] !== undefined) {
 
-        value =
+        return (
           parts[0] +
           "," +
-          parts[1].slice(0, 2);
+          parts[1].slice(0, 2)
+        );
+
       }
 
-      input.value = value;
+      return clean;
 
-      return;
     }
 
-    const value =
-      input.value.replace(/\D/g, "");
+    const clean =
+      value.replace(/\D/g, "");
 
-    input.value = value
-      ? value.replace(
-          /\B(?=(\d{3})+(?!\d))/g,
-          "."
-        )
-      : "";
-  }
+    if (!clean) {
 
-  function setupInputs(card) {
+      return "";
 
-    card
-      .querySelectorAll("input.ef-input")
-      .forEach(input => {
+    }
+
+    return clean.replace(
+      /\B(?=(\d{3})+(?!\d))/g,
+      "."
+    );
+
+  };
+
+  EF.setupInputs = function (calculator) {
+
+    calculator
+      .querySelectorAll(".ef-input")
+      .forEach(function (input) {
+
+        if (input.tagName === "SELECT") {
+
+          return;
+
+        }
 
         input.addEventListener(
           "input",
           function () {
 
-            const oldLength =
+            const cursorPosition =
+              this.selectionStart;
+
+            const originalLength =
               this.value.length;
 
-            const position =
-              this.selectionStart || 0;
+            this.value =
+              EF.formatInput(
+                this.value,
+                this
+              );
 
-            formatInput(this);
+            const newLength =
+              this.value.length;
 
-            const newPosition =
-              Math.max(
-                0,
-                position +
-                  this.value.length -
-                  oldLength
+            const newCursorPosition =
+              cursorPosition +
+              (
+                newLength -
+                originalLength
               );
 
             this.setSelectionRange(
-              newPosition,
-              newPosition
+              newCursorPosition,
+              newCursorPosition
             );
+
           }
         );
+
       });
-  }
 
-  function hide(card) {
+  };
 
-    [
-      ".ef-results",
-      ".ef-chart",
-      ".ef-share",
-      ".ef-reset"
-    ].forEach(selector => {
+  EF.showError = function (calculator) {
 
-      const element =
-        card.querySelector(selector);
+    const error =
+      calculator.querySelector(
+        ".ef-error"
+      );
 
-      if (element) {
-        element.style.display = "none";
-      }
-    });
-  }
+    error.textContent =
+      "Introduce valores válidos para realizar el cálculo.";
 
-  function show(card) {
+    error.style.display = "block";
 
-    const results =
-      card.querySelector(".ef-results");
+  };
 
-    const chart =
-      card.querySelector(".ef-chart");
-
-    const share =
-      card.querySelector(".ef-share");
-
-    const reset =
-      card.querySelector(".ef-reset");
+  EF.showResults = function (calculator) {
 
     const buttonGroup =
-      card.querySelector(".ef-button-group");
+      calculator.querySelector(
+        ".ef-button-group"
+      );
 
-    if (results) {
-      results.style.display = "grid";
-    }
+    const calculate =
+      calculator.querySelector(
+        ".ef-button"
+      );
 
-    if (chart) {
-      chart.style.display = "block";
-    }
+    const reset =
+      calculator.querySelector(
+        ".ef-reset"
+      );
 
-    if (share) {
-      share.style.display = "block";
-    }
+    calculator.querySelector(
+      ".ef-results"
+    ).style.display = "grid";
+
+    calculator.querySelector(
+      ".ef-chart"
+    ).style.display = "block";
+
+    calculator.querySelector(
+      ".ef-share"
+    ).style.display = "block";
 
     if (buttonGroup) {
 
       buttonGroup.style.display = "flex";
+      buttonGroup.style.flexDirection = "row";
       buttonGroup.style.alignItems = "center";
-      buttonGroup.style.gap = "12px";
       buttonGroup.style.flexWrap = "nowrap";
+      buttonGroup.style.gap = "12px";
+
+    }
+
+    if (calculate) {
+
+      calculate.style.flex = "1 1 auto";
+      calculate.style.width = "auto";
+
     }
 
     if (reset) {
+
       reset.style.display = "inline-flex";
-    }
-  }
+      reset.style.flex = "0 0 auto";
+      reset.style.width = "auto";
 
-  function showError(card, message) {
-
-    const error =
-      card.querySelector(".ef-error");
-
-    if (!error) {
-      return;
     }
 
-    error.textContent =
-      message ||
-      "Introduce valores válidos para realizar el cálculo.";
+  };
 
-    error.style.display = "block";
-  }
-
-  function clearError(card) {
-
-    const error =
-      card.querySelector(".ef-error");
-
-    if (!error) {
-      return;
-    }
-
-    error.textContent = "";
-    error.style.display = "none";
-  }
-
-  function setupReset(card) {
+  EF.setupReset = function (calculator) {
 
     const reset =
-      card.querySelector(".ef-reset");
-
-    if (
-      !reset ||
-      reset.dataset.efReady
-    ) {
-      return;
-    }
-
-    reset.dataset.efReady = "1";
+      calculator.querySelector(
+        ".ef-reset"
+      );
 
     reset.addEventListener(
       "click",
-      () => {
+      function () {
 
-        card
+        calculator
           .querySelectorAll("input")
-          .forEach(input => {
+          .forEach(function (input) {
+
             input.value = "";
+
           });
 
-        card
+        calculator
           .querySelectorAll("select")
-          .forEach(select => {
+          .forEach(function (select) {
+
             select.selectedIndex = 0;
+
           });
 
-        clearError(card);
-        hide(card);
+        calculator.querySelector(
+          ".ef-error"
+        ).style.display = "none";
 
-        if (card._efChart) {
+        calculator.querySelector(
+          ".ef-results"
+        ).style.display = "none";
 
-          card._efChart.destroy();
-          card._efChart = null;
+        calculator.querySelector(
+          ".ef-chart"
+        ).style.display = "none";
+
+        calculator.querySelector(
+          ".ef-share"
+        ).style.display = "none";
+
+        reset.style.display = "none";
+
+        if (calculator._efChart) {
+
+          calculator._efChart.destroy();
+
+          calculator._efChart = null;
+
         }
 
-        const feedback =
-          card.querySelector(
-            ".ef-share-feedback"
-          );
+        calculator.querySelector(
+          ".ef-share-feedback"
+        ).textContent = "";
 
-        if (feedback) {
-          feedback.textContent = "";
-        }
       }
     );
-  }
 
-  function createLine(
-    label,
-    data,
-    borderColor,
-    borderWidth
+  };
+
+  EF.setupSharing = function (
+    calculator,
+    getShareText
   ) {
 
-    return {
+    const feedback =
+      calculator.querySelector(
+        ".ef-share-feedback"
+      );
 
-      label,
+    calculator
+      .querySelector(
+        ".ef-share-whatsapp"
+      )
+      .addEventListener(
+        "click",
+        function () {
 
-      data: data.map(value =>
-        round2(value)
-      ),
+          window.open(
+            "https://wa.me/?text=" +
+            encodeURIComponent(
+              getShareText()
+            ),
+            "_blank"
+          );
 
-      borderColor,
-      borderWidth,
+        }
+      );
 
-      pointRadius: 0,
-      pointHoverRadius: 5,
-      pointHitRadius: 12,
+    calculator
+      .querySelector(
+        ".ef-share-telegram"
+      )
+      .addEventListener(
+        "click",
+        function () {
 
-      tension: 0.25,
-      fill: false
-    };
-  }
+          window.open(
+            "https://t.me/share/url?url=" +
+            encodeURIComponent(
+              window.location.href
+            ) +
+            "&text=" +
+            encodeURIComponent(
+              getShareText()
+            ),
+            "_blank"
+          );
 
-  function createChart(
-    card,
+        }
+      );
+
+    calculator
+      .querySelector(
+        ".ef-share-facebook"
+      )
+      .addEventListener(
+        "click",
+        function () {
+
+          window.open(
+            "https://www.facebook.com/sharer/sharer.php?u=" +
+            encodeURIComponent(
+              window.location.href
+            ),
+            "_blank"
+          );
+
+        }
+      );
+
+    calculator
+      .querySelector(
+        ".ef-share-x"
+      )
+      .addEventListener(
+        "click",
+        function () {
+
+          window.open(
+            "https://twitter.com/intent/tweet?text=" +
+            encodeURIComponent(
+              getShareText()
+            ) +
+            "&url=" +
+            encodeURIComponent(
+              window.location.href
+            ),
+            "_blank"
+          );
+
+        }
+      );
+
+    calculator
+      .querySelector(
+        ".ef-share-copy"
+      )
+      .addEventListener(
+        "click",
+        async function () {
+
+          try {
+
+            await navigator.clipboard.writeText(
+              getShareText()
+            );
+
+            feedback.textContent =
+              "Resultado copiado al portapapeles.";
+
+          } catch (error) {
+
+            feedback.textContent =
+              "No se ha podido copiar el resultado.";
+
+          }
+
+        }
+      );
+
+  };
+
+  EF.createChart = function (
+    calculator,
     result,
     datasets
   ) {
 
-    if (!window.Chart) {
-      return;
-    }
-
     const canvas =
-      card.querySelector(
+      calculator.querySelector(
         ".ef-chart-canvas"
       );
 
-    if (!canvas) {
-      return;
+    if (calculator._efChart) {
+
+      calculator._efChart.destroy();
+
     }
 
-    if (card._efChart) {
-      card._efChart.destroy();
-    }
+    const labels =
+      result.annualData.map(
+        function (item) {
 
-    card._efChart =
-      new Chart(canvas, {
-
-        type: "line",
-
-        data: {
-
-          labels:
-            result.annualData.map(
-              item => round2(item.year)
-            ),
-
-          datasets
-        },
-
-        options: {
-
-          responsive: true,
-          maintainAspectRatio: false,
-
-          interaction: {
-            mode: "index",
-            intersect: false
-          },
-
-          plugins: {
-
-            legend: {
-
-              position: "bottom",
-
-              labels: {
-
-                usePointStyle: true,
-                pointStyle: "circle",
-
-                boxWidth: 8,
-                boxHeight: 8,
-                padding: 20,
-
-                font: {
-                  family: "Nunito Sans"
-                }
-              }
-            },
-
-            tooltip: {
-
-              callbacks: {
-
-                label: context =>
-                  `${context.dataset.label}: ${currency(
-                    context.parsed.y
-                  )}`
-              }
-            }
-          },
-
-          scales: {
-
-            x: {
-
-              ticks: {
-
-                font: {
-                  family: "Nunito Sans"
-                },
-
-                callback: value =>
-                  round2(value)
-              }
-            },
-
-            y: {
-
-              beginAtZero: true,
-
-              ticks: {
-
-                font: {
-                  family: "Nunito Sans"
-                },
-
-                callback: value =>
-                  currency(value)
-              }
-            }
-          }
-        }
-      });
-  }
-
-  function setupSharing(
-    card,
-    getText
-  ) {
-
-    if (card.dataset.efShareReady) {
-      return;
-    }
-
-    card.dataset.efShareReady = "1";
-
-    const feedback =
-      card.querySelector(
-        ".ef-share-feedback"
-      );
-
-    const open = url => {
-
-      window.open(
-        url,
-        "_blank",
-        "noopener,noreferrer"
-      );
-    };
-
-    const bind = (
-      selector,
-      callback
-    ) => {
-
-      const element =
-        card.querySelector(selector);
-
-      if (element) {
-        element.addEventListener(
-          "click",
-          callback
-        );
-      }
-    };
-
-    bind(
-      ".ef-share-whatsapp",
-      () => {
-
-        open(
-          "https://wa.me/?text=" +
-            encodeURIComponent(
-              getText()
-            )
-        );
-      }
-    );
-
-    bind(
-      ".ef-share-telegram",
-      () => {
-
-        open(
-          "https://t.me/share/url?url=" +
-            encodeURIComponent(
-              location.href
-            ) +
-            "&text=" +
-            encodeURIComponent(
-              getText()
-            )
-        );
-      }
-    );
-
-    bind(
-      ".ef-share-facebook",
-      () => {
-
-        open(
-          "https://www.facebook.com/sharer/sharer.php?u=" +
-            encodeURIComponent(
-              location.href
-            )
-        );
-      }
-    );
-
-    bind(
-      ".ef-share-x",
-      () => {
-
-        open(
-          "https://twitter.com/intent/tweet?text=" +
-            encodeURIComponent(
-              getText()
-            ) +
-            "&url=" +
-            encodeURIComponent(
-              location.href
-            )
-        );
-      }
-    );
-
-    bind(
-      ".ef-share-copy",
-      async () => {
-
-        try {
-
-          await navigator.clipboard.writeText(
-            getText()
+          return EF.round2(
+            item.year
           );
 
-          if (feedback) {
-            feedback.textContent =
-              "Resultado copiado al portapapeles.";
-          }
-
-        } catch (error) {
-
-          if (feedback) {
-            feedback.textContent =
-              "No se ha podido copiar el resultado.";
-          }
         }
-      }
-    );
-  }
+      );
 
-  function compound(
+    const roundedDatasets =
+      datasets.map(
+        function (dataset) {
+
+          return {
+
+            ...dataset,
+
+            data: dataset.data.map(
+              function (value) {
+
+                return EF.round2(
+                  value
+                );
+
+              }
+            )
+
+          };
+
+        }
+      );
+
+    calculator._efChart =
+      new Chart(
+        canvas,
+        {
+
+          type: "line",
+
+          data: {
+
+            labels: labels,
+
+            datasets: roundedDatasets
+
+          },
+
+          options: {
+
+            responsive: true,
+
+            maintainAspectRatio: false,
+
+            interaction: {
+
+              mode: "index",
+
+              intersect: false
+
+            },
+
+            plugins: {
+
+              legend: {
+
+                position: "bottom",
+
+                labels: {
+
+                  usePointStyle: true,
+
+                  pointStyle: "circle",
+
+                  boxWidth: 8,
+
+                  boxHeight: 8,
+
+                  padding: 20,
+
+                  font: {
+
+                    family: "Nunito Sans"
+
+                  }
+
+                }
+
+              },
+
+              tooltip: {
+
+                callbacks: {
+
+                  label: function (context) {
+
+                    return (
+                      context.dataset.label +
+                      ": " +
+                      EF.formatCurrency(
+                        context.parsed.y
+                      )
+                    );
+
+                  }
+
+                }
+
+              }
+
+            },
+
+            scales: {
+
+              x: {
+
+                title: {
+
+                  display: true,
+
+                  text: "Años",
+
+                  font: {
+
+                    family: "Nunito Sans"
+
+                  }
+
+                },
+
+                ticks: {
+
+                  font: {
+
+                    family: "Nunito Sans"
+
+                  }
+
+                }
+
+              },
+
+              y: {
+
+                beginAtZero: true,
+
+                ticks: {
+
+                  font: {
+
+                    family: "Nunito Sans"
+
+                  },
+
+                  callback: function (value) {
+
+                    return EF.formatCurrency(
+                      value
+                    );
+
+                  }
+
+                }
+
+              }
+
+            }
+
+          }
+
+        }
+
+      );
+
+  };
+
+  EF.compound = function (
     capital,
     monthly,
     rate,
@@ -554,7 +609,6 @@
   ) {
 
     let balance = capital;
-    let interest = 0;
 
     const monthsPerPeriod =
       12 / frequency;
@@ -562,17 +616,21 @@
     const periodRate =
       rate / 100 / frequency;
 
-    const totalMonths =
-      years * 12;
-
     const annualData = [
+
       {
         year: 0,
         invested: capital,
         interest: 0,
         balance: capital
       }
+
     ];
+
+    let totalInterest = 0;
+
+    const totalMonths =
+      years * 12;
 
     for (
       let month = 1;
@@ -586,28 +644,36 @@
         month % monthsPerPeriod === 0
       ) {
 
-        const gain =
+        const interest =
           balance * periodRate;
 
-        balance += gain;
-        interest += gain;
+        balance += interest;
+
+        totalInterest += interest;
+
       }
 
       if (month % 12 === 0) {
 
+        const year =
+          month / 12;
+
         annualData.push({
 
-          year: month / 12,
+          year: year,
 
           invested:
             capital +
             monthly * month,
 
-          interest,
+          interest: totalInterest,
 
-          balance
+          balance: balance
+
         });
+
       }
+
     }
 
     return {
@@ -616,20 +682,24 @@
         capital +
         monthly * totalMonths,
 
-      interest,
-      final: balance,
-      annualData
-    };
-  }
+      interest: totalInterest,
 
-  function simple(
+      final: balance,
+
+      annualData: annualData
+
+    };
+
+  };
+
+  EF.simple = function (
     capital,
     rate,
     years
   ) {
 
     const annualInterest =
-      capital * rate / 100;
+      capital * (rate / 100);
 
     const annualData = [];
 
@@ -639,19 +709,23 @@
       year++
     ) {
 
+      const interest =
+        annualInterest * year;
+
       annualData.push({
 
-        year,
+        year: year,
 
         invested: capital,
 
-        interest:
-          annualInterest * year,
+        interest: interest,
 
         balance:
           capital +
-          annualInterest * year
+          interest
+
       });
+
     }
 
     return {
@@ -665,11 +739,13 @@
         capital +
         annualInterest * years,
 
-      annualData
-    };
-  }
+      annualData: annualData
 
-  function simpleSavings(
+    };
+
+  };
+
+  EF.simpleSavings = function (
     capital,
     contribution,
     rate,
@@ -677,136 +753,178 @@
     frequency
   ) {
 
-    const periods =
-      years * frequency;
+    const periodsPerYear =
+      frequency;
+
+    const totalPeriods =
+      years * periodsPerYear;
 
     const periodRate =
-      rate / 100 / frequency;
-
-    let invested = capital;
-
-    let interest =
-      capital *
       rate /
-      100 *
-      years;
+      100 /
+      periodsPerYear;
 
     const annualData = [
+
       {
         year: 0,
         invested: capital,
         interest: 0,
         balance: capital
       }
+
     ];
+
+    let totalInterest =
+      capital *
+      (rate / 100) *
+      years;
+
+    let totalInvested =
+      capital;
 
     for (
       let period = 1;
-      period <= periods;
+      period <= totalPeriods;
       period++
     ) {
 
-      interest +=
+      const remainingPeriods =
+        totalPeriods -
+        period;
+
+      totalInterest +=
         contribution *
         periodRate *
-        (periods - period);
+        remainingPeriods;
 
-      invested += contribution;
+      totalInvested +=
+        contribution;
 
       if (
-        period % frequency === 0
+        period % periodsPerYear === 0
       ) {
+
+        const year =
+          period /
+          periodsPerYear;
 
         annualData.push({
 
-          year:
-            period / frequency,
+          year: year,
 
-          invested,
+          invested: totalInvested,
 
-          interest,
+          interest: totalInterest,
 
           balance:
-            invested +
-            interest
+            totalInvested +
+            totalInterest
+
         });
+
       }
+
     }
 
     return {
 
-      invested,
+      invested: totalInvested,
 
-      interest,
+      interest: totalInterest,
 
       final:
-        invested +
-        interest,
+        totalInvested +
+        totalInterest,
 
-      annualData
+      annualData: annualData
+
     };
-  }
 
-  function mortgage(
+  };
+
+  EF.mortgage = function (
     loan,
     rate,
     years
   ) {
 
     const monthlyRate =
-      rate / 100 / 12;
+      rate /
+      100 /
+      12;
 
-    const months =
-      years * 12;
+    const totalMonths =
+      years *
+      12;
 
-    const payment =
-      monthlyRate === 0
-        ? loan / months
-        : loan *
-          (
-            monthlyRate *
-            Math.pow(
-              1 + monthlyRate,
-              months
-            )
-          ) /
-          (
-            Math.pow(
-              1 + monthlyRate,
-              months
-            ) - 1
-          );
+    let monthlyPayment;
+
+    if (monthlyRate === 0) {
+
+      monthlyPayment =
+        loan /
+        totalMonths;
+
+    } else {
+
+      monthlyPayment =
+        loan *
+        (
+          monthlyRate *
+          Math.pow(
+            1 + monthlyRate,
+            totalMonths
+          )
+        ) /
+        (
+          Math.pow(
+            1 + monthlyRate,
+            totalMonths
+          ) -
+          1
+        );
+
+    }
 
     let balance = loan;
-    let interest = 0;
+
+    let totalInterest = 0;
 
     const annualData = [
+
       {
         year: 0,
         balance: loan,
         interest: 0
       }
+
     ];
 
     for (
       let month = 1;
-      month <= months;
+      month <= totalMonths;
       month++
     ) {
 
-      const gain =
-        balance * monthlyRate;
+      const interest =
+        balance *
+        monthlyRate;
 
-      balance -=
-        payment - gain;
+      const principal =
+        monthlyPayment -
+        interest;
 
-      interest += gain;
+      balance -= principal;
+
+      totalInterest += interest;
 
       if (month % 12 === 0) {
 
         annualData.push({
 
-          year: month / 12,
+          year:
+            month / 12,
 
           balance:
             Math.max(
@@ -814,62 +932,80 @@
               0
             ),
 
-          interest
+          interest:
+            totalInterest
+
         });
+
       }
+
     }
 
     return {
 
-      monthlyPayment: payment,
+      monthlyPayment:
+        monthlyPayment,
 
-      totalInterest: interest,
+      totalInterest:
+        totalInterest,
 
       totalPaid:
-        loan + interest,
+        loan +
+        totalInterest,
 
-      annualData
+      annualData:
+        annualData
+
     };
-  }
 
-  function independence(
-    current,
-    expenses,
-    savings,
-    returnRate,
-    withdrawal
+  };
+
+  EF.financialIndependence = function (
+    currentCapital,
+    annualExpenses,
+    monthlySavings,
+    annualReturn,
+    withdrawalRate
   ) {
 
-    const target =
-      expenses /
-      (withdrawal / 100);
+    const targetCapital =
+      annualExpenses /
+      (withdrawalRate / 100);
 
     const monthlyReturn =
       Math.pow(
-        1 + returnRate / 100,
+        1 +
+        annualReturn / 100,
         1 / 12
-      ) - 1;
+      ) -
+      1;
 
-    let capital = current;
+    let capital =
+      currentCapital;
+
     let months = 0;
 
     const annualData = [
+
       {
         year: 0,
-        capital,
-        target
+        capital: capital,
+        target: targetCapital
       }
+
     ];
 
+    const maxMonths = 1200;
+
     while (
-      capital < target &&
-      months < 1200
+      capital < targetCapital &&
+      months < maxMonths
     ) {
 
       capital =
         capital *
         (1 + monthlyReturn) +
-        savings;
+        monthlySavings;
 
       months++;
 
@@ -877,85 +1013,118 @@
 
         annualData.push({
 
-          year: months / 12,
+          year:
+            months / 12,
 
-          capital,
+          capital:
+            capital,
 
-          target
+          target:
+            targetCapital
+
         });
+
       }
-    }
 
-    if (
-      months % 12 !== 0 &&
-      capital >= target
-    ) {
-
-      annualData.push({
-
-        year: months / 12,
-
-        capital,
-
-        target
-      });
     }
 
     return {
 
-      target,
+      target:
+        targetCapital,
 
       years:
         months / 12,
 
-      annualData,
+      capital:
+        capital,
 
-      reached:
-        capital >= target
+      annualData:
+        annualData
+
     };
-  }
 
-  function emergency(
-    expenses,
-    coverage,
-    current,
-    contribution
+  };
+
+  EF.emergencyFund = function (
+    monthlyExpenses,
+    coverageMonths,
+    currentSavings,
+    monthlyContribution
   ) {
 
     const target =
-      expenses * coverage;
+      monthlyExpenses *
+      coverageMonths;
 
     const remaining =
       Math.max(
-        target - current,
+        target -
+        currentSavings,
         0
       );
 
-    let capital = current;
     let months = 0;
 
+    let capital =
+      currentSavings;
+
     const annualData = [
+
       {
         year: 0,
-        capital,
-        target
+        capital: capital,
+        target: target
       }
+
     ];
 
-    while (
-      capital < target &&
-      contribution > 0 &&
-      months < 1200
+    if (
+      remaining > 0 &&
+      monthlyContribution > 0
     ) {
 
-      capital += contribution;
-      months++;
+      while (
+        capital < target &&
+        months < 1200
+      ) {
 
-      if (months % 12 === 0) {
+        capital +=
+          monthlyContribution;
+
+        months++;
+
+        if (months % 12 === 0) {
+
+          annualData.push({
+
+            year:
+              months / 12,
+
+            capital:
+              Math.min(
+                capital,
+                target
+              ),
+
+            target:
+              target
+
+          });
+
+        }
+
+      }
+
+      if (
+        months % 12 !== 0 &&
+        months < 1200
+      ) {
 
         annualData.push({
 
-          year: months / 12,
+          year:
+            months / 12,
 
           capital:
             Math.min(
@@ -963,1141 +1132,146 @@
               target
             ),
 
-          target
+          target:
+            target
+
         });
+
       }
-    }
 
-    if (
-      months % 12 !== 0 &&
-      capital >= target
-    ) {
-
-      annualData.push({
-
-        year: months / 12,
-
-        capital: target,
-
-        target
-      });
     }
 
     return {
 
-      target,
-      remaining,
-      months,
-      annualData,
+      target:
+        target,
 
-      reached:
-        capital >= target
+      remaining:
+        remaining,
+
+      months:
+        months,
+
+      annualData:
+        annualData
+
     };
-  }
 
-  function retirement(
-    age,
+  };
+
+  EF.retirement = function (
+    currentAge,
     retirementAge,
-    savings,
-    contribution,
+    currentSavings,
+    monthlyContribution,
     realReturn,
-    income,
+    monthlyIncome,
     retirementYears
   ) {
 
-    const years =
-      retirementAge - age;
+    const yearsToRetirement =
+      retirementAge -
+      currentAge;
 
     const monthlyRate =
       Math.pow(
-        1 + realReturn / 100,
+        1 +
+        realReturn / 100,
         1 / 12
-      ) - 1;
+      ) -
+      1;
 
-    const months =
-      retirementYears * 12;
+    const totalMonths =
+      retirementYears *
+      12;
 
-    const target =
-      monthlyRate === 0
-        ? income * months
-        : income *
-          (
-            1 -
-            Math.pow(
-              1 + monthlyRate,
-              -months
-            )
-          ) /
-          monthlyRate;
+    let targetCapital;
 
-    let projected = savings;
+    if (monthlyRate === 0) {
+
+      targetCapital =
+        monthlyIncome *
+        totalMonths;
+
+    } else {
+
+      targetCapital =
+        monthlyIncome *
+        (
+          1 -
+          Math.pow(
+            1 + monthlyRate,
+            -totalMonths
+          )
+        ) /
+        monthlyRate;
+
+    }
+
+    let projectedCapital =
+      currentSavings;
 
     const annualData = [
+
       {
         year: 0,
-        capital: projected,
-        target
+        capital: projectedCapital,
+        target: targetCapital
       }
+
     ];
 
     for (
       let month = 1;
-      month <= years * 12;
+      month <=
+      yearsToRetirement * 12;
       month++
     ) {
 
-      projected =
-        projected *
+      projectedCapital =
+        projectedCapital *
         (1 + monthlyRate) +
-        contribution;
+        monthlyContribution;
 
       if (month % 12 === 0) {
 
         annualData.push({
 
-          year: month / 12,
+          year:
+            month / 12,
 
-          capital: projected,
+          capital:
+            projectedCapital,
 
-          target
+          target:
+            targetCapital
+
         });
+
       }
+
     }
 
     return {
 
-      target,
+      target:
+        targetCapital,
 
-      projected,
+      projected:
+        projectedCapital,
 
       difference:
-        projected - target,
+        projectedCapital -
+        targetCapital,
 
-      annualData
-    };
-  }
+      yearsToRetirement:
+        yearsToRetirement,
 
-  function initCard(
-    card,
-    calculate
-  ) {
+      annualData:
+        annualData
 
-    if (card.dataset.efReady) {
-      return;
-    }
-
-    card.dataset.efReady = "1";
-
-    let shareText = "";
-
-    hide(card);
-    setupInputs(card);
-    setupReset(card);
-
-    setupSharing(
-      card,
-      () => shareText
-    );
-
-    const button =
-      card.querySelector(".ef-button");
-
-    if (!button) {
-      return;
-    }
-
-    button.addEventListener(
-      "click",
-      () => {
-
-        clearError(card);
-
-        let result;
-
-        try {
-
-          result =
-            calculate(card);
-
-        } catch (error) {
-
-          console.error(
-            "Error en calculadora financiera:",
-            error
-          );
-
-          showError(card);
-
-          return;
-        }
-
-        if (!result) {
-
-          showError(card);
-
-          return;
-        }
-
-        shareText =
-          result.shareText;
-
-        show(card);
-
-        result.display();
-
-        createChart(
-          card,
-          result,
-          result.datasets
-        );
-      }
-    );
-  }
-
-  function setupAll() {
-
-    document
-      .querySelectorAll(
-        ".ef-interest-calculator"
-      )
-      .forEach(card => {
-
-        initCard(card, card => {
-
-          const capital =
-            parse(
-              card.querySelector(
-                ".ef-capital"
-              )
-            );
-
-          const monthly =
-            parse(
-              card.querySelector(
-                ".ef-monthly"
-              )
-            );
-
-          const rate =
-            parse(
-              card.querySelector(
-                ".ef-rate"
-              )
-            );
-
-          const years =
-            parse(
-              card.querySelector(
-                ".ef-years"
-              )
-            );
-
-          const frequency =
-            parseInt(
-              card.querySelector(
-                ".ef-frequency"
-              ).value,
-              10
-            );
-
-          if (
-            ![
-              capital,
-              monthly,
-              rate,
-              years
-            ].every(Number.isFinite) ||
-            capital < 0 ||
-            monthly < 0 ||
-            rate < 0 ||
-            years <= 0
-          ) {
-            return null;
-          }
-
-          const result =
-            compound(
-              capital,
-              monthly,
-              rate,
-              years,
-              frequency
-            );
-
-          return {
-
-            ...result,
-
-            datasets: [
-
-              createLine(
-                "Capital aportado",
-                result.annualData.map(
-                  item => item.invested
-                ),
-                "#8AAE6D",
-                2
-              ),
-
-              createLine(
-                "Intereses generados",
-                result.annualData.map(
-                  item => item.interest
-                ),
-                "#BC6B4A",
-                2
-              ),
-
-              createLine(
-                "Capital total",
-                result.annualData.map(
-                  item => item.balance
-                ),
-                "#3E5A3C",
-                3
-              )
-            ],
-
-            display: () => {
-
-              card.querySelector(
-                ".ef-final-balance"
-              ).textContent =
-                currency(
-                  result.final
-                );
-
-              card.querySelector(
-                ".ef-total-invested"
-              ).textContent =
-                currency(
-                  result.invested
-                );
-
-              card.querySelector(
-                ".ef-total-interest"
-              ).textContent =
-                currency(
-                  result.interest
-                );
-            },
-
-            shareText:
-              `He calculado que mi capital final sería ${currency(
-                result.final
-              )} utilizando la calculadora de interés compuesto del Vademécum Financiero.`
-          };
-        });
-      });
-
-    document
-      .querySelectorAll(
-        ".ef-simple-interest-calculator"
-      )
-      .forEach(card => {
-
-        initCard(card, card => {
-
-          const capital =
-            parse(
-              card.querySelector(
-                ".ef-capital"
-              )
-            );
-
-          const rate =
-            parse(
-              card.querySelector(
-                ".ef-rate"
-              )
-            );
-
-          const years =
-            parse(
-              card.querySelector(
-                ".ef-years"
-              )
-            );
-
-          if (
-            ![
-              capital,
-              rate,
-              years
-            ].every(Number.isFinite) ||
-            capital < 0 ||
-            rate < 0 ||
-            years <= 0
-          ) {
-            return null;
-          }
-
-          const result =
-            simple(
-              capital,
-              rate,
-              years
-            );
-
-          return {
-
-            ...result,
-
-            datasets: [
-
-              createLine(
-                "Capital inicial",
-                result.annualData.map(
-                  item => item.invested
-                ),
-                "#8AAE6D",
-                2
-              ),
-
-              createLine(
-                "Intereses generados",
-                result.annualData.map(
-                  item => item.interest
-                ),
-                "#BC6B4A",
-                2
-              ),
-
-              createLine(
-                "Capital total",
-                result.annualData.map(
-                  item => item.balance
-                ),
-                "#3E5A3C",
-                3
-              )
-            ],
-
-            display: () => {
-
-              card.querySelector(
-                ".ef-final-balance"
-              ).textContent =
-                currency(
-                  result.final
-                );
-
-              card.querySelector(
-                ".ef-total-invested"
-              ).textContent =
-                currency(
-                  result.invested
-                );
-
-              card.querySelector(
-                ".ef-total-interest"
-              ).textContent =
-                currency(
-                  result.interest
-                );
-            },
-
-            shareText:
-              `He calculado que mi capital final sería ${currency(
-                result.final
-              )} utilizando la calculadora de interés simple del Vademécum Financiero.`
-          };
-        });
-      });
-
-    document
-      .querySelectorAll(
-        ".ef-simple-savings-calculator"
-      )
-      .forEach(card => {
-
-        initCard(card, card => {
-
-          const capital =
-            parse(
-              card.querySelector(
-                ".ef-capital"
-              )
-            );
-
-          const contribution =
-            parse(
-              card.querySelector(
-                ".ef-contribution"
-              )
-            );
-
-          const rate =
-            parse(
-              card.querySelector(
-                ".ef-rate"
-              )
-            );
-
-          const years =
-            parse(
-              card.querySelector(
-                ".ef-years"
-              )
-            );
-
-          const frequency =
-            parseInt(
-              card.querySelector(
-                ".ef-frequency"
-              ).value,
-              10
-            );
-
-          if (
-            ![
-              capital,
-              contribution,
-              rate,
-              years
-            ].every(Number.isFinite) ||
-            capital < 0 ||
-            contribution < 0 ||
-            rate < 0 ||
-            years <= 0
-          ) {
-            return null;
-          }
-
-          const result =
-            simpleSavings(
-              capital,
-              contribution,
-              rate,
-              years,
-              frequency
-            );
-
-          return {
-
-            ...result,
-
-            datasets: [
-
-              createLine(
-                "Capital aportado",
-                result.annualData.map(
-                  item => item.invested
-                ),
-                "#8AAE6D",
-                2
-              ),
-
-              createLine(
-                "Intereses generados",
-                result.annualData.map(
-                  item => item.interest
-                ),
-                "#BC6B4A",
-                2
-              ),
-
-              createLine(
-                "Capital total",
-                result.annualData.map(
-                  item => item.balance
-                ),
-                "#3E5A3C",
-                3
-              )
-            ],
-
-            display: () => {
-
-              card.querySelector(
-                ".ef-final-balance"
-              ).textContent =
-                currency(
-                  result.final
-                );
-
-              card.querySelector(
-                ".ef-total-invested"
-              ).textContent =
-                currency(
-                  result.invested
-                );
-
-              card.querySelector(
-                ".ef-total-interest"
-              ).textContent =
-                currency(
-                  result.interest
-                );
-            },
-
-            shareText:
-              `He calculado que mi capital final sería ${currency(
-                result.final
-              )} utilizando la calculadora de ahorro con interés simple del Vademécum Financiero.`
-          };
-        });
-      });
-
-    document
-      .querySelectorAll(
-        ".ef-mortgage-calculator"
-      )
-      .forEach(card => {
-
-        initCard(card, card => {
-
-          const loan =
-            parse(
-              card.querySelector(
-                ".ef-loan"
-              )
-            );
-
-          const rate =
-            parse(
-              card.querySelector(
-                ".ef-rate"
-              )
-            );
-
-          const years =
-            parse(
-              card.querySelector(
-                ".ef-years"
-              )
-            );
-
-          if (
-            ![
-              loan,
-              rate,
-              years
-            ].every(Number.isFinite) ||
-            loan <= 0 ||
-            rate < 0 ||
-            years <= 0
-          ) {
-            return null;
-          }
-
-          const result =
-            mortgage(
-              loan,
-              rate,
-              years
-            );
-
-          return {
-
-            ...result,
-
-            datasets: [
-
-              createLine(
-                "Deuda pendiente",
-                result.annualData.map(
-                  item => item.balance
-                ),
-                "#3E5A3C",
-                3
-              ),
-
-              createLine(
-                "Intereses acumulados",
-                result.annualData.map(
-                  item => item.interest
-                ),
-                "#BC6B4A",
-                2
-              )
-            ],
-
-            display: () => {
-
-              card.querySelector(
-                ".ef-monthly-payment"
-              ).textContent =
-                currency(
-                  result.monthlyPayment
-                );
-
-              card.querySelector(
-                ".ef-total-interest"
-              ).textContent =
-                currency(
-                  result.totalInterest
-                );
-
-              card.querySelector(
-                ".ef-total-paid"
-              ).textContent =
-                currency(
-                  result.totalPaid
-                );
-            },
-
-            shareText:
-              `He calculado una cuota mensual de ${currency(
-                result.monthlyPayment
-              )} utilizando la calculadora de hipoteca del Vademécum Financiero.`
-          };
-        });
-      });
-
-    document
-      .querySelectorAll(
-        ".ef-financial-independence-calculator"
-      )
-      .forEach(card => {
-
-        initCard(card, card => {
-
-          const current =
-            parse(
-              card.querySelector(
-                ".ef-current-capital"
-              )
-            );
-
-          const expenses =
-            parse(
-              card.querySelector(
-                ".ef-annual-expenses"
-              )
-            );
-
-          const savings =
-            parse(
-              card.querySelector(
-                ".ef-monthly-savings"
-              )
-            );
-
-          const returnRate =
-            parse(
-              card.querySelector(
-                ".ef-annual-return"
-              )
-            );
-
-          const withdrawal =
-            parse(
-              card.querySelector(
-                ".ef-withdrawal-rate"
-              )
-            );
-
-          if (
-            ![
-              current,
-              expenses,
-              savings,
-              returnRate,
-              withdrawal
-            ].every(Number.isFinite) ||
-            current < 0 ||
-            expenses <= 0 ||
-            savings < 0 ||
-            returnRate < 0 ||
-            withdrawal <= 0 ||
-            (
-              savings === 0 &&
-              current <
-                expenses /
-                (withdrawal / 100)
-            )
-          ) {
-            return null;
-          }
-
-          const result =
-            independence(
-              current,
-              expenses,
-              savings,
-              returnRate,
-              withdrawal
-            );
-
-          if (!result.reached) {
-            return null;
-          }
-
-          return {
-
-            ...result,
-
-            datasets: [
-
-              createLine(
-                "Patrimonio acumulado",
-                result.annualData.map(
-                  item => item.capital
-                ),
-                "#3E5A3C",
-                3
-              ),
-
-              createLine(
-                "Capital objetivo",
-                result.annualData.map(
-                  item => item.target
-                ),
-                "#BC6B4A",
-                2
-              )
-            ],
-
-            display: () => {
-
-              card.querySelector(
-                ".ef-fi-target"
-              ).textContent =
-                currency(
-                  result.target
-                );
-
-              card.querySelector(
-                ".ef-fi-years"
-              ).textContent =
-                `${round2(
-                  result.years
-                ).toLocaleString(
-                  "es-ES",
-                  {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  }
-                )} años`;
-
-              card.querySelector(
-                ".ef-fi-savings"
-              ).textContent =
-                currency(
-                  savings
-                );
-            },
-
-            shareText:
-              `He calculado que alcanzaría la independencia financiera en aproximadamente ${round2(
-                result.years
-              ).toLocaleString(
-                "es-ES",
-                {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                }
-              )} años con el Vademécum Financiero.`
-          };
-        });
-      });
-
-    document
-      .querySelectorAll(
-        ".ef-emergency-fund-calculator"
-      )
-      .forEach(card => {
-
-        initCard(card, card => {
-
-          const expenses =
-            parse(
-              card.querySelector(
-                ".ef-monthly-expenses"
-              )
-            );
-
-          const coverage =
-            parse(
-              card.querySelector(
-                ".ef-coverage-months"
-              )
-            );
-
-          const current =
-            parse(
-              card.querySelector(
-                ".ef-current-savings"
-              )
-            );
-
-          const contribution =
-            parse(
-              card.querySelector(
-                ".ef-monthly-contribution"
-              )
-            );
-
-          if (
-            ![
-              expenses,
-              coverage,
-              current,
-              contribution
-            ].every(Number.isFinite) ||
-            expenses <= 0 ||
-            coverage <= 0 ||
-            current < 0 ||
-            contribution < 0
-          ) {
-            return null;
-          }
-
-          const result =
-            emergency(
-              expenses,
-              coverage,
-              current,
-              contribution
-            );
-
-          return {
-
-            ...result,
-
-            datasets: [
-
-              createLine(
-                "Fondo acumulado",
-                result.annualData.map(
-                  item => item.capital
-                ),
-                "#3E5A3C",
-                3
-              ),
-
-              createLine(
-                "Fondo recomendado",
-                result.annualData.map(
-                  item => item.target
-                ),
-                "#BC6B4A",
-                2
-              )
-            ],
-
-            display: () => {
-
-              card.querySelector(
-                ".ef-emergency-target"
-              ).textContent =
-                currency(
-                  result.target
-                );
-
-              card.querySelector(
-                ".ef-emergency-remaining"
-              ).textContent =
-                currency(
-                  result.remaining
-                );
-
-              card.querySelector(
-                ".ef-emergency-time"
-              ).textContent =
-                result.remaining === 0
-                  ? "Objetivo alcanzado"
-                  : result.reached
-                    ? `${result.months} meses`
-                    : "No se alcanza con la aportación actual";
-            },
-
-            shareText:
-              `He calculado mi fondo de emergencia recomendado de ${currency(
-                result.target
-              )} con el Vademécum Financiero.`
-          };
-        });
-      });
-
-    document
-      .querySelectorAll(
-        ".ef-retirement-calculator"
-      )
-      .forEach(card => {
-
-        initCard(card, card => {
-
-          const age =
-            parse(
-              card.querySelector(
-                ".ef-current-age"
-              )
-            );
-
-          const retirementAge =
-            parse(
-              card.querySelector(
-                ".ef-retirement-age"
-              )
-            );
-
-          const savings =
-            parse(
-              card.querySelector(
-                ".ef-current-savings"
-              )
-            );
-
-          const contribution =
-            parse(
-              card.querySelector(
-                ".ef-monthly-contribution"
-              )
-            );
-
-          const realReturn =
-            parse(
-              card.querySelector(
-                ".ef-real-return"
-              )
-            );
-
-          const income =
-            parse(
-              card.querySelector(
-                ".ef-retirement-income"
-              )
-            );
-
-          const retirementYears =
-            parse(
-              card.querySelector(
-                ".ef-retirement-years"
-              )
-            );
-
-          if (
-            ![
-              age,
-              retirementAge,
-              savings,
-              contribution,
-              realReturn,
-              income,
-              retirementYears
-            ].every(Number.isFinite) ||
-            age < 18 ||
-            retirementAge <= age ||
-            savings < 0 ||
-            contribution < 0 ||
-            realReturn < 0 ||
-            income <= 0 ||
-            retirementYears <= 0
-          ) {
-            return null;
-          }
-
-          const result =
-            retirement(
-              age,
-              retirementAge,
-              savings,
-              contribution,
-              realReturn,
-              income,
-              retirementYears
-            );
-
-          return {
-
-            ...result,
-
-            datasets: [
-
-              createLine(
-                "Capital proyectado",
-                result.annualData.map(
-                  item => item.capital
-                ),
-                "#3E5A3C",
-                3
-              ),
-
-              createLine(
-                "Capital necesario",
-                result.annualData.map(
-                  item => item.target
-                ),
-                "#BC6B4A",
-                2
-              )
-            ],
-
-            display: () => {
-
-              card.querySelector(
-                ".ef-retirement-target"
-              ).textContent =
-                currency(
-                  result.target
-                );
-
-              card.querySelector(
-                ".ef-retirement-projected"
-              ).textContent =
-                currency(
-                  result.projected
-                );
-
-              card.querySelector(
-                ".ef-retirement-difference"
-              ).textContent =
-                currency(
-                  result.difference
-                );
-            },
-
-            shareText:
-              "He calculado mi planificación para la jubilación con el Vademécum Financiero."
-          };
-        });
-      });
-  }
-
-  function loadChart() {
-
-    if (window.Chart) {
-
-      setupAll();
-
-      return;
-    }
-
-    const script =
-      document.createElement("script");
-
-    script.src = CHART_URL;
-
-    script.onload =
-      setupAll;
-
-    script.onerror = () => {
-
-      console.error(
-        "No se pudo cargar Chart.js."
-      );
     };
 
-    document.head.appendChild(
-      script
-    );
-  }
-
-  if (
-    document.readyState ===
-    "loading"
-  ) {
-
-    document.addEventListener(
-      "DOMContentLoaded",
-      loadChart
-    );
-
-  } else {
-
-    loadChart();
-  }
+  };
 
 })();
