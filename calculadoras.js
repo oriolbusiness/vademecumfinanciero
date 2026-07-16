@@ -1374,3 +1374,195 @@
   };
 
 })();
+
+
+(function () {
+
+  "use strict";
+
+  document
+    .querySelectorAll(
+      ".ef-financial-independence-calculator"
+    )
+    .forEach(function (calculator) {
+
+      EF.setupInputs(calculator);
+
+      EF.setupReset(calculator);
+
+      calculator
+        .querySelector(".ef-button")
+        .addEventListener(
+          "click",
+          function () {
+
+            const currentCapital =
+              EF.parseNumber(
+                calculator.querySelector(
+                  ".ef-current-capital"
+                )
+              );
+
+            const annualExpenses =
+              EF.parseNumber(
+                calculator.querySelector(
+                  ".ef-annual-expenses"
+                )
+              );
+
+            const monthlySavings =
+              EF.parseNumber(
+                calculator.querySelector(
+                  ".ef-monthly-savings"
+                )
+              );
+
+            const annualReturn =
+              EF.parseNumber(
+                calculator.querySelector(
+                  ".ef-annual-return"
+                )
+              );
+
+            const withdrawalRate =
+              EF.parseNumber(
+                calculator.querySelector(
+                  ".ef-withdrawal-rate"
+                )
+              );
+
+            if (
+              !Number.isFinite(currentCapital) ||
+              !Number.isFinite(annualExpenses) ||
+              !Number.isFinite(monthlySavings) ||
+              !Number.isFinite(annualReturn) ||
+              !Number.isFinite(withdrawalRate) ||
+              currentCapital < 0 ||
+              annualExpenses <= 0 ||
+              monthlySavings < 0 ||
+              annualReturn < 0 ||
+              withdrawalRate <= 0
+            ) {
+
+              EF.showError(calculator);
+
+              return;
+
+            }
+
+            calculator.querySelector(
+              ".ef-error"
+            ).style.display = "none";
+
+            const result =
+              EF.financialIndependence(
+                currentCapital,
+                annualExpenses,
+                monthlySavings,
+                annualReturn,
+                withdrawalRate
+              );
+
+            calculator.querySelector(
+              ".ef-fi-target"
+            ).textContent =
+              EF.formatCurrency(
+                result.target
+              );
+
+            calculator.querySelector(
+              ".ef-fi-years"
+            ).textContent =
+              result.years +
+              (
+                result.years === 1
+                  ? " año"
+                  : " años"
+              );
+
+            calculator.querySelector(
+              ".ef-fi-savings"
+            ).textContent =
+              EF.formatCurrency(
+                monthlySavings
+              );
+
+            EF.showResults(calculator);
+
+            EF.createChart(
+              calculator,
+              result,
+              [
+
+                {
+
+                  label: "Capital acumulado",
+
+                  data:
+                    result.annualData.map(
+                      function (item) {
+
+                        return item.capital;
+
+                      }
+                    ),
+
+                  borderWidth: 2,
+
+                  tension: 0.3,
+
+                  fill: false
+
+                },
+
+                {
+
+                  label: "Capital necesario",
+
+                  data:
+                    result.annualData.map(
+                      function (item) {
+
+                        return item.target;
+
+                      }
+                    ),
+
+                  borderWidth: 2,
+
+                  borderDash: [6, 6],
+
+                  tension: 0,
+
+                  fill: false
+
+                }
+
+              ]
+            );
+
+            EF.setupSharing(
+              calculator,
+              function () {
+
+                return (
+                  "Mi objetivo de independencia financiera es alcanzar " +
+                  EF.formatCurrency(result.target) +
+                  " en aproximadamente " +
+                  result.years +
+                  (
+                    result.years === 1
+                      ? " año."
+                      : " años."
+                  )
+                );
+
+              }
+            );
+
+          }
+        );
+
+    });
+
+})();
