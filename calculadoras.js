@@ -6,9 +6,46 @@
 
   EF.round2 = function (value) {
 
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+
+      return 0;
+
+    }
+
     return Math.round(
-      (Number(value) + Number.EPSILON) * 100
+      (number + Number.EPSILON) * 100
     ) / 100;
+
+  };
+
+  EF.roundObject = function (object) {
+
+    const rounded = {};
+
+    Object.keys(object).forEach(function (key) {
+
+      const value = object[key];
+
+      rounded[key] =
+        typeof value === "number"
+          ? EF.round2(value)
+          : value;
+
+    });
+
+    return rounded;
+
+  };
+
+  EF.roundAnnualData = function (annualData) {
+
+    return annualData.map(function (item) {
+
+      return EF.roundObject(item);
+
+    });
 
   };
 
@@ -679,14 +716,25 @@
     return {
 
       invested:
-        capital +
-        monthly * totalMonths,
+        EF.round2(
+          capital +
+          monthly * totalMonths
+        ),
 
-      interest: totalInterest,
+      interest:
+        EF.round2(
+          totalInterest
+        ),
 
-      final: balance,
+      final:
+        EF.round2(
+          balance
+        ),
 
-      annualData: annualData
+      annualData:
+        EF.roundAnnualData(
+          annualData
+        )
 
     };
 
@@ -730,16 +778,26 @@
 
     return {
 
-      invested: capital,
+      invested:
+        EF.round2(
+          capital
+        ),
 
       interest:
-        annualInterest * years,
+        EF.round2(
+          annualInterest * years
+        ),
 
       final:
-        capital +
-        annualInterest * years,
+        EF.round2(
+          capital +
+          annualInterest * years
+        ),
 
-      annualData: annualData
+      annualData:
+        EF.roundAnnualData(
+          annualData
+        )
 
     };
 
@@ -829,15 +887,26 @@
 
     return {
 
-      invested: totalInvested,
+      invested:
+        EF.round2(
+          totalInvested
+        ),
 
-      interest: totalInterest,
+      interest:
+        EF.round2(
+          totalInterest
+        ),
 
       final:
-        totalInvested +
-        totalInterest,
+        EF.round2(
+          totalInvested +
+          totalInterest
+        ),
 
-      annualData: annualData
+      annualData:
+        EF.roundAnnualData(
+          annualData
+        )
 
     };
 
@@ -944,17 +1013,25 @@
     return {
 
       monthlyPayment:
-        monthlyPayment,
+        EF.round2(
+          monthlyPayment
+        ),
 
       totalInterest:
-        totalInterest,
+        EF.round2(
+          totalInterest
+        ),
 
       totalPaid:
-        loan +
-        totalInterest,
+        EF.round2(
+          loan +
+          totalInterest
+        ),
 
       annualData:
-        annualData
+        EF.roundAnnualData(
+          annualData
+        )
 
     };
 
@@ -1031,16 +1108,24 @@
     return {
 
       target:
-        targetCapital,
+        EF.round2(
+          targetCapital
+        ),
 
       years:
-        months / 12,
+        EF.round2(
+          months / 12
+        ),
 
       capital:
-        capital,
+        EF.round2(
+          capital
+        ),
 
       annualData:
-        annualData
+        EF.roundAnnualData(
+          annualData
+        )
 
     };
 
@@ -1144,16 +1229,22 @@
     return {
 
       target:
-        target,
+        EF.round2(
+          target
+        ),
 
       remaining:
-        remaining,
+        EF.round2(
+          remaining
+        ),
 
       months:
         months,
 
       annualData:
-        annualData
+        EF.roundAnnualData(
+          annualData
+        )
 
     };
 
@@ -1255,20 +1346,28 @@
     return {
 
       target:
-        targetCapital,
+        EF.round2(
+          targetCapital
+        ),
 
       projected:
-        projectedCapital,
+        EF.round2(
+          projectedCapital
+        ),
 
       difference:
-        projectedCapital -
-        targetCapital,
+        EF.round2(
+          projectedCapital -
+          targetCapital
+        ),
 
       yearsToRetirement:
         yearsToRetirement,
 
       annualData:
-        annualData
+        EF.roundAnnualData(
+          annualData
+        )
 
     };
 
