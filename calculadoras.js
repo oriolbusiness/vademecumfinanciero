@@ -68,10 +68,21 @@
     let value =
       input.value.trim();
 
+    if (!value) {
+
+      return 0;
+
+    }
+
     value =
       value.replace(/\./g, "");
 
-    return parseFloat(value);
+    const number =
+      parseFloat(value);
+
+    return Number.isFinite(number)
+      ? number
+      : 0;
 
   };
 
@@ -469,7 +480,10 @@
         ".ef-chart-canvas"
       );
 
-    if (!canvas || typeof Chart === "undefined") {
+    if (
+      !canvas ||
+      typeof Chart === "undefined"
+    ) {
 
       return;
 
@@ -1561,41 +1575,6 @@
               ".ef-other-debts"
             )
           );
-
-        const values = [
-
-          cash,
-          investments,
-          property,
-          otherAssets,
-          mortgageDebt,
-          loans,
-          creditCardDebt,
-          otherDebts
-
-        ];
-
-        const invalid =
-          values.some(
-            function (value) {
-
-              return (
-                !Number.isFinite(value) ||
-                value < 0
-              );
-
-            }
-          );
-
-        if (invalid) {
-
-          EF.showError(
-            calculator
-          );
-
-          return;
-
-        }
 
         const result =
           EF.netWorth(
