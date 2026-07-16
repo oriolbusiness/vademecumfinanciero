@@ -6,7 +6,7 @@
 
     EF.formatCurrency = function (value) {
 
-        return value.toLocaleString("es-ES", {
+        return Number(value).toLocaleString("es-ES", {
 
             style: "currency",
 
@@ -22,9 +22,11 @@
 
     EF.parseNumber = function (input) {
 
+        if (!input) return NaN;
+
         let value = input.value.trim();
 
-        if (
+        const isPercentage =
 
             input.classList.contains("ef-rate") ||
 
@@ -32,9 +34,9 @@
 
             input.classList.contains("ef-withdrawal-rate") ||
 
-            input.classList.contains("ef-real-return")
+            input.classList.contains("ef-real-return");
 
-        ) {
+        if (isPercentage) {
 
             value = value.replace(",", ".");
 
@@ -50,7 +52,7 @@
 
     EF.formatInput = function (value, input) {
 
-        if (
+        const isPercentage =
 
             input.classList.contains("ef-rate") ||
 
@@ -58,9 +60,9 @@
 
             input.classList.contains("ef-withdrawal-rate") ||
 
-            input.classList.contains("ef-real-return")
+            input.classList.contains("ef-real-return");
 
-        ) {
+        if (isPercentage) {
 
             let clean = value.replace(/[^\d,]/g, "");
 
@@ -84,11 +86,7 @@
 
         const clean = value.replace(/\D/g, "");
 
-        if (!clean) {
-
-            return "";
-
-        }
+        if (!clean) return "";
 
         return clean.replace(
 
@@ -102,67 +100,33 @@
 
     EF.setupInputs = function (calculator) {
 
-        calculator.querySelectorAll(
+        calculator.querySelectorAll(".ef-input").forEach(function (input) {
 
-            ".ef-input"
+            if (input.tagName === "SELECT") return;
 
-        ).forEach(function (input) {
+            input.addEventListener("input", function () {
 
-            if (input.tagName === "SELECT") {
+                const cursorPosition = this.selectionStart;
 
-                return;
+                const originalLength = this.value.length;
 
-            }
+                this.value = EF.formatInput(this.value, this);
 
-            input.addEventListener(
+                const newLength = this.value.length;
 
-                "input",
+                const newCursorPosition =
 
-                function () {
+                    cursorPosition + (newLength - originalLength);
 
-                    const cursorPosition =
+                this.setSelectionRange(
 
-                        this.selectionStart;
+                    newCursorPosition,
 
-                    const originalLength =
+                    newCursorPosition
 
-                        this.value.length;
+                );
 
-                    this.value = EF.formatInput(
-
-                        this.value,
-
-                        this
-
-                    );
-
-                    const newLength =
-
-                        this.value.length;
-
-                    const newCursorPosition =
-
-                        cursorPosition +
-
-                        (
-
-                            newLength -
-
-                            originalLength
-
-                        );
-
-                    this.setSelectionRange(
-
-                        newCursorPosition,
-
-                        newCursorPosition
-
-                    );
-
-                }
-
-            );
+            });
 
         });
 
@@ -170,11 +134,9 @@
 
     EF.showError = function (calculator) {
 
-        const error = calculator.querySelector(
+        const error = calculator.querySelector(".ef-error");
 
-            ".ef-error"
-
-        );
+        if (!error) return;
 
         error.textContent =
 
@@ -186,119 +148,91 @@
 
     EF.showResults = function (calculator) {
 
-        calculator.querySelector(
+        const elements = [
 
-            ".ef-results"
+            ".ef-results",
 
-        ).style.display = "grid";
+            ".ef-chart",
 
-        calculator.querySelector(
-
-            ".ef-chart"
-
-        ).style.display = "block";
-
-        calculator.querySelector(
-
-            ".ef-share"
-
-        ).style.display = "block";
-
-        calculator.querySelector(
+            ".ef-share",
 
             ".ef-reset"
 
-        ).style.display = "block";
+        ];
+
+        elements.forEach(function (selector) {
+
+            const element = calculator.querySelector(selector);
+
+            if (element) element.style.display =
+
+                selector === ".ef-results" ? "grid" : "block";
+
+        });
 
     };
 
     EF.setupReset = function (calculator) {
 
-        const reset = calculator.querySelector(
+        const reset = calculator.querySelector(".ef-reset");
 
-            ".ef-reset"
+        if (!reset) return;
 
-        );
+        reset.addEventListener("click", function () {
 
-        reset.addEventListener(
+            calculator.querySelectorAll("input").forEach(function (input) {
 
-            "click",
+                input.value = "";
 
-            function () {
+            });
 
-                calculator.querySelectorAll(
+            calculator.querySelectorAll("select").forEach(function (select) {
 
-                    "input"
+                select.selectedIndex = 0;
 
-                ).forEach(function (input) {
+            });
 
-                    input.value = "";
+            [
 
-                });
+                ".ef-error",
 
-                calculator.querySelectorAll(
+                ".ef-results",
 
-                    "select"
+                ".ef-chart",
 
-                ).forEach(function (select) {
+                ".ef-share"
 
-                    select.selectedIndex = 0;
+            ].forEach(function (selector) {
 
-                });
+                const element = calculator.querySelector(selector);
 
-                calculator.querySelector(
+                if (element) element.style.display = "none";
 
-                    ".ef-error"
+            });
 
-                ).style.display = "none";
+            reset.style.display = "none";
 
-                calculator.querySelector(
+            if (calculator._efChart) {
 
-                    ".ef-results"
+                calculator._efChart.destroy();
 
-                ).style.display = "none";
-
-                calculator.querySelector(
-
-                    ".ef-chart"
-
-                ).style.display = "none";
-
-                calculator.querySelector(
-
-                    ".ef-share"
-
-                ).style.display = "none";
-
-                reset.style.display = "none";
-
-                if (calculator._efChart) {
-
-                    calculator._efChart.destroy();
-
-                    calculator._efChart = null;
-
-                }
-
-                calculator.querySelector(
-
-                    ".ef-share-feedback"
-
-                ).textContent = "";
+                calculator._efChart = null;
 
             }
 
-        );
+            const feedback = calculator.querySelector(
+
+                ".ef-share-feedback"
+
+            );
+
+            if (feedback) feedback.textContent = "";
+
+        });
 
     };
 
-    EF.setupSharing = function (
-
-        calculator,
-
-        getShareText
-
-    ) {
+    EF.setupSharing = function (calculator, getShareText) {
 
         const feedback = calculator.querySelector(
 
@@ -306,143 +240,115 @@
 
         );
 
-        calculator.querySelector(
+        const shareText = function () {
+
+            return encodeURIComponent(getShareText());
+
+        };
+
+        const whatsapp = calculator.querySelector(
 
             ".ef-share-whatsapp"
 
-        ).addEventListener(
+        );
 
-            "click",
+        if (whatsapp) {
 
-            function () {
+            whatsapp.addEventListener("click", function () {
 
                 window.open(
 
-                    "https://wa.me/?text=" +
-
-                    encodeURIComponent(
-
-                        getShareText()
-
-                    ),
+                    "https://wa.me/?text=" + shareText(),
 
                     "_blank"
 
                 );
 
-            }
+            });
 
-        );
+        }
 
-        calculator.querySelector(
+        const telegram = calculator.querySelector(
 
             ".ef-share-telegram"
 
-        ).addEventListener(
+        );
 
-            "click",
+        if (telegram) {
 
-            function () {
+            telegram.addEventListener("click", function () {
 
                 window.open(
 
                     "https://t.me/share/url?url=" +
 
-                    encodeURIComponent(
-
-                        window.location.href
-
-                    ) +
+                    encodeURIComponent(window.location.href) +
 
                     "&text=" +
 
-                    encodeURIComponent(
-
-                        getShareText()
-
-                    ),
+                    shareText(),
 
                     "_blank"
 
                 );
 
-            }
+            });
 
-        );
+        }
 
-        calculator.querySelector(
+        const facebook = calculator.querySelector(
 
             ".ef-share-facebook"
 
-        ).addEventListener(
+        );
 
-            "click",
+        if (facebook) {
 
-            function () {
+            facebook.addEventListener("click", function () {
 
                 window.open(
 
                     "https://www.facebook.com/sharer/sharer.php?u=" +
 
-                    encodeURIComponent(
-
-                        window.location.href
-
-                    ),
+                    encodeURIComponent(window.location.href),
 
                     "_blank"
 
                 );
 
-            }
+            });
 
-        );
+        }
 
-        calculator.querySelector(
+        const x = calculator.querySelector(".ef-share-x");
 
-            ".ef-share-x"
+        if (x) {
 
-        ).addEventListener(
-
-            "click",
-
-            function () {
+            x.addEventListener("click", function () {
 
                 window.open(
 
                     "https://twitter.com/intent/tweet?text=" +
 
-                    encodeURIComponent(
-
-                        getShareText()
-
-                    ) +
+                    shareText() +
 
                     "&url=" +
 
-                    encodeURIComponent(
-
-                        window.location.href
-
-                    ),
+                    encodeURIComponent(window.location.href),
 
                     "_blank"
 
                 );
 
-            }
+            });
 
-        );
+        }
 
-        calculator.querySelector(
+        const copy = calculator.querySelector(".ef-share-copy");
 
-            ".ef-share-copy"
+        if (copy) {
 
-        ).addEventListener(
-
-            "click",
-
-            async function () {
+            copy.addEventListener("click", async function () {
 
                 try {
 
@@ -452,33 +358,33 @@
 
                     );
 
-                    feedback.textContent =
+                    if (feedback) {
 
-                        "Resultado copiado al portapapeles.";
+                        feedback.textContent =
+
+                            "Resultado copiado al portapapeles.";
+
+                    }
 
                 } catch (error) {
 
-                    feedback.textContent =
+                    if (feedback) {
 
-                        "No se ha podido copiar el resultado.";
+                        feedback.textContent =
+
+                            "No se ha podido copiar el resultado.";
+
+                    }
 
                 }
 
-            }
+            });
 
-        );
+        }
 
     };
 
-    EF.createChart = function (
-
-        calculator,
-
-        result,
-
-        datasets
-
-    ) {
+    EF.createChart = function (calculator, result, datasets) {
 
         const canvas = calculator.querySelector(
 
@@ -486,101 +392,67 @@
 
         );
 
+        if (!canvas || typeof Chart === "undefined") return;
+
         if (calculator._efChart) {
 
             calculator._efChart.destroy();
 
         }
 
-        const labels = result.annualData.map(
+        const labels = result.annualData.map(function (item) {
 
-            function (item) {
+            return item.year;
 
-                return item.year;
+        });
 
-            }
+        calculator._efChart = new Chart(canvas, {
 
-        );
+            type: "line",
 
-        calculator._efChart = new Chart(
+            data: {
 
-            canvas,
+                labels: labels,
 
-            {
+                datasets: datasets
 
-                type: "line",
+            },
 
-                data: {
+            options: {
 
-                    labels: labels,
+                responsive: true,
 
-                    datasets: datasets
+                maintainAspectRatio: false,
+
+                interaction: {
+
+                    mode: "index",
+
+                    intersect: false
 
                 },
 
-                options: {
+                plugins: {
 
-                    responsive: true,
+                    legend: {
 
-                    maintainAspectRatio: false,
+                        position: "bottom",
 
-                    interaction: {
+                        labels: {
 
-                        mode: "index",
+                            usePointStyle: true,
 
-                        intersect: false
+                            pointStyle: "circle",
 
-                    },
+                            boxWidth: 8,
 
-                    plugins: {
+                            boxHeight: 8,
 
-                        legend: {
+                            padding: 20,
 
-                            position: "bottom",
+                            font: {
 
-                            labels: {
-
-                                usePointStyle: true,
-
-                                pointStyle: "circle",
-
-                                boxWidth: 8,
-
-                                boxHeight: 8,
-
-                                padding: 20,
-
-                                font: {
-
-                                    family: "Nunito Sans"
-
-                                }
-
-                            }
-
-                        },
-
-                        tooltip: {
-
-                            callbacks: {
-
-                                label: function (context) {
-
-                                    return (
-
-                                        context.dataset.label +
-
-                                        ": " +
-
-                                        EF.formatCurrency(
-
-                                            context.parsed.y
-
-                                        )
-
-                                    );
-
-                                }
+                                family: "Nunito Sans"
 
                             }
 
@@ -588,57 +460,79 @@
 
                     },
 
-                    scales: {
+                    tooltip: {
 
-                        x: {
+                        callbacks: {
 
-                            title: {
+                            label: function (context) {
 
-                                display: true,
+                                return (
 
-                                text: "Años",
+                                    context.dataset.label +
 
-                                font: {
+                                    ": " +
 
-                                    family: "Nunito Sans"
+                                    EF.formatCurrency(
 
-                                }
+                                        context.parsed.y
 
-                            },
+                                    )
 
-                            ticks: {
+                                );
 
-                                font: {
+                            }
 
-                                    family: "Nunito Sans"
+                        }
 
-                                }
+                    }
+
+                },
+
+                scales: {
+
+                    x: {
+
+                        title: {
+
+                            display: true,
+
+                            text: "Años",
+
+                            font: {
+
+                                family: "Nunito Sans"
 
                             }
 
                         },
 
-                        y: {
+                        ticks: {
 
-                            beginAtZero: true,
+                            font: {
 
-                            ticks: {
+                                family: "Nunito Sans"
 
-                                font: {
+                            }
 
-                                    family: "Nunito Sans"
+                        }
 
-                                },
+                    },
 
-                                callback: function (value) {
+                    y: {
 
-                                    return EF.formatCurrency(
+                        beginAtZero: true,
 
-                                        value
+                        ticks: {
 
-                                    );
+                            font: {
 
-                                }
+                                family: "Nunito Sans"
+
+                            },
+
+                            callback: function (value) {
+
+                                return EF.formatCurrency(value);
 
                             }
 
@@ -650,7 +544,7 @@
 
             }
 
-        );
+        });
 
     };
 
@@ -670,9 +564,13 @@
 
         let balance = capital;
 
+        let totalInterest = 0;
+
         const monthsPerPeriod = 12 / frequency;
 
         const periodRate = rate / 100 / frequency;
+
+        const totalMonths = years * 12;
 
         const annualData = [{
 
@@ -686,27 +584,13 @@
 
         }];
 
-        let totalInterest = 0;
-
-        const totalMonths = years * 12;
-
-        for (
-
-            let month = 1;
-
-            month <= totalMonths;
-
-            month++
-
-        ) {
+        for (let month = 1; month <= totalMonths; month++) {
 
             balance += monthly;
 
             if (month % monthsPerPeriod === 0) {
 
-                const interest =
-
-                    balance * periodRate;
+                const interest = balance * periodRate;
 
                 balance += interest;
 
@@ -716,11 +600,9 @@
 
             if (month % 12 === 0) {
 
-                const year = month / 12;
-
                 annualData.push({
 
-                    year: year,
+                    year: month / 12,
 
                     invested: capital + monthly * month,
 
@@ -748,35 +630,15 @@
 
     };
 
-    EF.simple = function (
+    EF.simple = function (capital, rate, years) {
 
-        capital,
-
-        rate,
-
-        years
-
-    ) {
-
-        const annualInterest =
-
-            capital * (rate / 100);
+        const annualInterest = capital * (rate / 100);
 
         const annualData = [];
 
-        for (
+        for (let year = 0; year <= years; year++) {
 
-            let year = 0;
-
-            year <= years;
-
-            year++
-
-        ) {
-
-            const interest =
-
-                annualInterest * year;
+            const interest = annualInterest * year;
 
             annualData.push({
 
@@ -820,15 +682,9 @@
 
     ) {
 
-        const periodsPerYear = frequency;
+        const totalPeriods = years * frequency;
 
-        const totalPeriods =
-
-            years * periodsPerYear;
-
-        const periodRate =
-
-            rate / 100 / periodsPerYear;
+        const periodRate = rate / 100 / frequency;
 
         const annualData = [{
 
@@ -842,25 +698,13 @@
 
         }];
 
-        let totalInterest =
-
-            capital * (rate / 100) * years;
+        let totalInterest = capital * (rate / 100) * years;
 
         let totalInvested = capital;
 
-        for (
+        for (let period = 1; period <= totalPeriods; period++) {
 
-            let period = 1;
-
-            period <= totalPeriods;
-
-            period++
-
-        ) {
-
-            const remainingPeriods =
-
-                totalPeriods - period;
+            const remainingPeriods = totalPeriods - period;
 
             totalInterest +=
 
@@ -872,29 +716,17 @@
 
             totalInvested += contribution;
 
-            if (
-
-                period % periodsPerYear === 0
-
-            ) {
-
-                const year =
-
-                    period / periodsPerYear;
+            if (period % frequency === 0) {
 
                 annualData.push({
 
-                    year: year,
+                    year: period / frequency,
 
                     invested: totalInvested,
 
                     interest: totalInterest,
 
-                    balance:
-
-                        totalInvested +
-
-                        totalInterest
+                    balance: totalInvested + totalInterest
 
                 });
 
@@ -908,11 +740,7 @@
 
             interest: totalInterest,
 
-            final:
-
-                totalInvested +
-
-                totalInterest,
+            final: totalInvested + totalInterest,
 
             annualData: annualData
 
@@ -920,19 +748,9 @@
 
     };
 
-    EF.mortgage = function (
+    EF.mortgage = function (loan, rate, years) {
 
-        loan,
-
-        rate,
-
-        years
-
-    ) {
-
-        const monthlyRate =
-
-            rate / 100 / 12;
+        const monthlyRate = rate / 100 / 12;
 
         const totalMonths = years * 12;
 
@@ -940,9 +758,7 @@
 
         if (monthlyRate === 0) {
 
-            monthlyPayment =
-
-                loan / totalMonths;
+            monthlyPayment = loan / totalMonths;
 
         } else {
 
@@ -992,23 +808,11 @@
 
         }];
 
-        for (
+        for (let month = 1; month <= totalMonths; month++) {
 
-            let month = 1;
+            const interest = balance * monthlyRate;
 
-            month <= totalMonths;
-
-            month++
-
-        ) {
-
-            const interest =
-
-                balance * monthlyRate;
-
-            const principal =
-
-                monthlyPayment - interest;
+            const principal = monthlyPayment - interest;
 
             balance -= principal;
 
@@ -1020,13 +824,7 @@
 
                     year: month / 12,
 
-                    balance: Math.max(
-
-                        balance,
-
-                        0
-
-                    ),
+                    balance: Math.max(balance, 0),
 
                     interest: totalInterest
 
@@ -1094,21 +892,11 @@
 
         }];
 
-        const maxMonths = 1200;
-
-        while (
-
-            capital < targetCapital &&
-
-            months < maxMonths
-
-        ) {
+        while (capital < targetCapital && months < 1200) {
 
             capital =
 
-                capital *
-
-                (1 + monthlyReturn) +
+                capital * (1 + monthlyReturn) +
 
                 monthlySavings;
 
@@ -1156,11 +944,7 @@
 
     ) {
 
-        const target =
-
-            monthlyExpenses *
-
-            coverageMonths;
+        const target = monthlyExpenses * coverageMonths;
 
         const remaining = Math.max(
 
@@ -1184,21 +968,9 @@
 
         }];
 
-        if (
+        if (remaining > 0 && monthlyContribution > 0) {
 
-            remaining > 0 &&
-
-            monthlyContribution > 0
-
-        ) {
-
-            while (
-
-                capital < target &&
-
-                months < 1200
-
-            ) {
+            while (capital < target && months < 1200) {
 
                 capital += monthlyContribution;
 
@@ -1210,13 +982,7 @@
 
                         year: months / 12,
 
-                        capital: Math.min(
-
-                            capital,
-
-                            target
-
-                        ),
+                        capital: Math.min(capital, target),
 
                         target: target
 
@@ -1226,25 +992,13 @@
 
             }
 
-            if (
-
-                months % 12 !== 0 &&
-
-                months < 1200
-
-            ) {
+            if (months % 12 !== 0 && months < 1200) {
 
                 annualData.push({
 
                     year: months / 12,
 
-                    capital: Math.min(
-
-                        capital,
-
-                        target
-
-                    ),
+                    capital: Math.min(capital, target),
 
                     target: target
 
@@ -1286,9 +1040,7 @@
 
     ) {
 
-        const yearsToRetirement =
-
-            retirementAge - currentAge;
+        const yearsToRetirement = retirementAge - currentAge;
 
         const monthlyRate =
 
@@ -1300,19 +1052,13 @@
 
             ) - 1;
 
-        const totalMonths =
-
-            retirementYears * 12;
+        const totalMonths = retirementYears * 12;
 
         let targetCapital;
 
         if (monthlyRate === 0) {
 
-            targetCapital =
-
-                monthlyIncome *
-
-                totalMonths;
+            targetCapital = monthlyIncome * totalMonths;
 
         } else {
 
@@ -1338,9 +1084,7 @@
 
         }
 
-        let projectedCapital =
-
-            currentSavings;
+        let projectedCapital = currentSavings;
 
         const annualData = [{
 
@@ -1392,18 +1136,1142 @@
 
             projected: projectedCapital,
 
-            difference:
+            difference: projectedCapital - targetCapital,
 
-                projectedCapital - targetCapital,
-
-            yearsToRetirement:
-
-                yearsToRetirement,
+            yearsToRetirement: yearsToRetirement,
 
             annualData: annualData
 
         };
 
     };
+
+    function getValue(calculator, selector) {
+
+        return EF.parseNumber(
+
+            calculator.querySelector(selector)
+
+        );
+
+    }
+
+    function hideResults(calculator) {
+
+        [
+
+            ".ef-results",
+
+            ".ef-chart",
+
+            ".ef-share",
+
+            ".ef-reset"
+
+        ].forEach(function (selector) {
+
+            const element = calculator.querySelector(selector);
+
+            if (element) element.style.display = "none";
+
+        });
+
+    }
+
+    function showError(calculator) {
+
+        hideResults(calculator);
+
+        EF.showError(calculator);
+
+    }
+
+    function setupCalculator(selector, calculate) {
+
+        document.querySelectorAll(selector).forEach(function (calculator) {
+
+            EF.setupInputs(calculator);
+
+            EF.setupReset(calculator);
+
+            const button = calculator.querySelector(".ef-button");
+
+            if (!button) return;
+
+            button.addEventListener("click", function () {
+
+                const result = calculate(calculator);
+
+                if (!result) {
+
+                    showError(calculator);
+
+                    return;
+
+                }
+
+                const error = calculator.querySelector(".ef-error");
+
+                if (error) error.style.display = "none";
+
+                EF.showResults(calculator);
+
+                result.display(calculator);
+
+                EF.createChart(
+
+                    calculator,
+
+                    result.chart,
+
+                    result.datasets
+
+                );
+
+            });
+
+        });
+
+    }
+
+    function line(label, data, color, width) {
+
+        return {
+
+            label: label,
+
+            data: data,
+
+            borderColor: color,
+
+            borderWidth: width,
+
+            pointRadius: 0,
+
+            pointHoverRadius: 5,
+
+            pointHitRadius: 12,
+
+            tension: 0.25,
+
+            fill: false
+
+        };
+
+    }
+
+    setupCalculator(
+
+        ".ef-interest-calculator",
+
+        function (calculator) {
+
+            const capital = getValue(calculator, ".ef-capital");
+
+            const monthly = getValue(calculator, ".ef-monthly");
+
+            const rate = getValue(calculator, ".ef-rate");
+
+            const years = getValue(calculator, ".ef-years");
+
+            const frequency = parseInt(
+
+                calculator.querySelector(".ef-frequency").value
+
+            );
+
+            if (
+
+                isNaN(capital) ||
+
+                isNaN(monthly) ||
+
+                isNaN(rate) ||
+
+                isNaN(years) ||
+
+                capital < 0 ||
+
+                monthly < 0 ||
+
+                rate < 0 ||
+
+                years <= 0
+
+            ) return null;
+
+            const result = EF.compound(
+
+                capital,
+
+                monthly,
+
+                rate,
+
+                years,
+
+                frequency
+
+            );
+
+            return {
+
+                chart: result,
+
+                display: function (calculator) {
+
+                    calculator.querySelector(
+
+                        ".ef-total-invested"
+
+                    ).textContent = EF.formatCurrency(result.invested);
+
+                    calculator.querySelector(
+
+                        ".ef-total-interest"
+
+                    ).textContent = EF.formatCurrency(result.interest);
+
+                    calculator.querySelector(
+
+                        ".ef-final-balance"
+
+                    ).textContent = EF.formatCurrency(result.final);
+
+                },
+
+                datasets: [
+
+                    line(
+
+                        "Capital aportado",
+
+                        result.annualData.map(function (item) {
+
+                            return item.invested;
+
+                        }),
+
+                        "#8AAE6D",
+
+                        2
+
+                    ),
+
+                    line(
+
+                        "Intereses generados",
+
+                        result.annualData.map(function (item) {
+
+                            return item.interest;
+
+                        }),
+
+                        "#BC6B4A",
+
+                        2
+
+                    ),
+
+                    line(
+
+                        "Capital total",
+
+                        result.annualData.map(function (item) {
+
+                            return item.balance;
+
+                        }),
+
+                        "#3E5A3C",
+
+                        3
+
+                    )
+
+                ]
+
+            };
+
+        }
+
+    );
+
+    setupCalculator(
+
+        ".ef-simple-interest-calculator",
+
+        function (calculator) {
+
+            const capital = getValue(calculator, ".ef-capital");
+
+            const rate = getValue(calculator, ".ef-rate");
+
+            const years = getValue(calculator, ".ef-years");
+
+            if (
+
+                isNaN(capital) ||
+
+                isNaN(rate) ||
+
+                isNaN(years) ||
+
+                capital < 0 ||
+
+                rate < 0 ||
+
+                years <= 0
+
+            ) return null;
+
+            const result = EF.simple(capital, rate, years);
+
+            return {
+
+                chart: result,
+
+                display: function (calculator) {
+
+                    calculator.querySelector(
+
+                        ".ef-total-invested"
+
+                    ).textContent = EF.formatCurrency(result.invested);
+
+                    calculator.querySelector(
+
+                        ".ef-total-interest"
+
+                    ).textContent = EF.formatCurrency(result.interest);
+
+                    calculator.querySelector(
+
+                        ".ef-final-balance"
+
+                    ).textContent = EF.formatCurrency(result.final);
+
+                },
+
+                datasets: [
+
+                    line(
+
+                        "Capital inicial",
+
+                        result.annualData.map(function (item) {
+
+                            return item.invested;
+
+                        }),
+
+                        "#8AAE6D",
+
+                        2
+
+                    ),
+
+                    line(
+
+                        "Intereses generados",
+
+                        result.annualData.map(function (item) {
+
+                            return item.interest;
+
+                        }),
+
+                        "#BC6B4A",
+
+                        2
+
+                    ),
+
+                    line(
+
+                        "Capital total",
+
+                        result.annualData.map(function (item) {
+
+                            return item.balance;
+
+                        }),
+
+                        "#3E5A3C",
+
+                        3
+
+                    )
+
+                ]
+
+            };
+
+        }
+
+    );
+
+    setupCalculator(
+
+        ".ef-simple-savings-calculator",
+
+        function (calculator) {
+
+            const capital = getValue(calculator, ".ef-capital");
+
+            const contribution = getValue(
+
+                calculator,
+
+                ".ef-contribution"
+
+            );
+
+            const rate = getValue(calculator, ".ef-rate");
+
+            const years = getValue(calculator, ".ef-years");
+
+            const frequency = parseInt(
+
+                calculator.querySelector(".ef-frequency").value
+
+            );
+
+            if (
+
+                isNaN(capital) ||
+
+                isNaN(contribution) ||
+
+                isNaN(rate) ||
+
+                isNaN(years) ||
+
+                capital < 0 ||
+
+                contribution < 0 ||
+
+                rate < 0 ||
+
+                years <= 0
+
+            ) return null;
+
+            const result = EF.simpleSavings(
+
+                capital,
+
+                contribution,
+
+                rate,
+
+                years,
+
+                frequency
+
+            );
+
+            return {
+
+                chart: result,
+
+                display: function (calculator) {
+
+                    calculator.querySelector(
+
+                        ".ef-total-invested"
+
+                    ).textContent = EF.formatCurrency(result.invested);
+
+                    calculator.querySelector(
+
+                        ".ef-total-interest"
+
+                    ).textContent = EF.formatCurrency(result.interest);
+
+                    calculator.querySelector(
+
+                        ".ef-final-balance"
+
+                    ).textContent = EF.formatCurrency(result.final);
+
+                },
+
+                datasets: [
+
+                    line(
+
+                        "Capital aportado",
+
+                        result.annualData.map(function (item) {
+
+                            return item.invested;
+
+                        }),
+
+                        "#8AAE6D",
+
+                        2
+
+                    ),
+
+                    line(
+
+                        "Intereses generados",
+
+                        result.annualData.map(function (item) {
+
+                            return item.interest;
+
+                        }),
+
+                        "#BC6B4A",
+
+                        2
+
+                    ),
+
+                    line(
+
+                        "Capital total",
+
+                        result.annualData.map(function (item) {
+
+                            return item.balance;
+
+                        }),
+
+                        "#3E5A3C",
+
+                        3
+
+                    )
+
+                ]
+
+            };
+
+        }
+
+    );
+
+    setupCalculator(
+
+        ".ef-mortgage-calculator",
+
+        function (calculator) {
+
+            const loan = getValue(calculator, ".ef-loan");
+
+            const rate = getValue(calculator, ".ef-rate");
+
+            const years = getValue(calculator, ".ef-years");
+
+            if (
+
+                isNaN(loan) ||
+
+                isNaN(rate) ||
+
+                isNaN(years) ||
+
+                loan <= 0 ||
+
+                rate < 0 ||
+
+                years <= 0
+
+            ) return null;
+
+            const result = EF.mortgage(loan, rate, years);
+
+            return {
+
+                chart: result,
+
+                display: function (calculator) {
+
+                    calculator.querySelector(
+
+                        ".ef-monthly-payment"
+
+                    ).textContent = EF.formatCurrency(
+
+                        result.monthlyPayment
+
+                    );
+
+                    calculator.querySelector(
+
+                        ".ef-total-interest"
+
+                    ).textContent = EF.formatCurrency(
+
+                        result.totalInterest
+
+                    );
+
+                    calculator.querySelector(
+
+                        ".ef-total-paid"
+
+                    ).textContent = EF.formatCurrency(
+
+                        result.totalPaid
+
+                    );
+
+                },
+
+                datasets: [
+
+                    line(
+
+                        "Deuda pendiente",
+
+                        result.annualData.map(function (item) {
+
+                            return item.balance;
+
+                        }),
+
+                        "#3E5A3C",
+
+                        3
+
+                    ),
+
+                    line(
+
+                        "Intereses acumulados",
+
+                        result.annualData.map(function (item) {
+
+                            return item.interest;
+
+                        }),
+
+                        "#BC6B4A",
+
+                        2
+
+                    )
+
+                ]
+
+            };
+
+        }
+
+    );
+
+    setupCalculator(
+
+        ".ef-financial-independence-calculator",
+
+        function (calculator) {
+
+            const currentCapital = getValue(
+
+                calculator,
+
+                ".ef-current-capital"
+
+            );
+
+            const annualExpenses = getValue(
+
+                calculator,
+
+                ".ef-annual-expenses"
+
+            );
+
+            const monthlySavings = getValue(
+
+                calculator,
+
+                ".ef-monthly-savings"
+
+            );
+
+            const annualReturn = getValue(
+
+                calculator,
+
+                ".ef-annual-return"
+
+            );
+
+            const withdrawalRate = getValue(
+
+                calculator,
+
+                ".ef-withdrawal-rate"
+
+            );
+
+            if (
+
+                isNaN(currentCapital) ||
+
+                isNaN(annualExpenses) ||
+
+                isNaN(monthlySavings) ||
+
+                isNaN(annualReturn) ||
+
+                isNaN(withdrawalRate) ||
+
+                currentCapital < 0 ||
+
+                annualExpenses <= 0 ||
+
+                monthlySavings < 0 ||
+
+                annualReturn < 0 ||
+
+                withdrawalRate <= 0
+
+            ) return null;
+
+            const result = EF.financialIndependence(
+
+                currentCapital,
+
+                annualExpenses,
+
+                monthlySavings,
+
+                annualReturn,
+
+                withdrawalRate
+
+            );
+
+            return {
+
+                chart: result,
+
+                display: function (calculator) {
+
+                    calculator.querySelector(
+
+                        ".ef-fi-target"
+
+                    ).textContent = EF.formatCurrency(result.target);
+
+                    calculator.querySelector(
+
+                        ".ef-fi-years"
+
+                    ).textContent =
+
+                        result.years.toLocaleString("es-ES", {
+
+                            minimumFractionDigits: 1,
+
+                            maximumFractionDigits: 1
+
+                        }) + " años";
+
+                    calculator.querySelector(
+
+                        ".ef-fi-savings"
+
+                    ).textContent = EF.formatCurrency(monthlySavings);
+
+                },
+
+                datasets: [
+
+                    line(
+
+                        "Patrimonio acumulado",
+
+                        result.annualData.map(function (item) {
+
+                            return item.capital;
+
+                        }),
+
+                        "#3E5A3C",
+
+                        3
+
+                    ),
+
+                    line(
+
+                        "Capital objetivo",
+
+                        result.annualData.map(function (item) {
+
+                            return item.target;
+
+                        }),
+
+                        "#BC6B4A",
+
+                        2
+
+                    )
+
+                ]
+
+            };
+
+        }
+
+    );
+
+    setupCalculator(
+
+        ".ef-emergency-fund-calculator",
+
+        function (calculator) {
+
+            const monthlyExpenses = getValue(
+
+                calculator,
+
+                ".ef-monthly-expenses"
+
+            );
+
+            const coverageMonths = getValue(
+
+                calculator,
+
+                ".ef-coverage-months"
+
+            );
+
+            const currentSavings = getValue(
+
+                calculator,
+
+                ".ef-current-savings"
+
+            );
+
+            const monthlyContribution = getValue(
+
+                calculator,
+
+                ".ef-monthly-contribution"
+
+            );
+
+            if (
+
+                isNaN(monthlyExpenses) ||
+
+                isNaN(coverageMonths) ||
+
+                isNaN(currentSavings) ||
+
+                isNaN(monthlyContribution) ||
+
+                monthlyExpenses <= 0 ||
+
+                coverageMonths <= 0 ||
+
+                currentSavings < 0 ||
+
+                monthlyContribution < 0
+
+            ) return null;
+
+            const result = EF.emergencyFund(
+
+                monthlyExpenses,
+
+                coverageMonths,
+
+                currentSavings,
+
+                monthlyContribution
+
+            );
+
+            return {
+
+                chart: result,
+
+                display: function (calculator) {
+
+                    calculator.querySelector(
+
+                        ".ef-emergency-target"
+
+                    ).textContent = EF.formatCurrency(result.target);
+
+                    calculator.querySelector(
+
+                        ".ef-emergency-remaining"
+
+                    ).textContent = EF.formatCurrency(result.remaining);
+
+                    calculator.querySelector(
+
+                        ".ef-emergency-time"
+
+                    ).textContent =
+
+                        result.remaining === 0
+
+                            ? "Objetivo alcanzado"
+
+                            : monthlyContribution === 0
+
+                                ? "—"
+
+                                : result.months + " meses";
+
+                },
+
+                datasets: [
+
+                    line(
+
+                        "Fondo acumulado",
+
+                        result.annualData.map(function (item) {
+
+                            return item.capital;
+
+                        }),
+
+                        "#3E5A3C",
+
+                        3
+
+                    ),
+
+                    line(
+
+                        "Fondo recomendado",
+
+                        result.annualData.map(function (item) {
+
+                            return item.target;
+
+                        }),
+
+                        "#BC6B4A",
+
+                        2
+
+                    )
+
+                ]
+
+            };
+
+        }
+
+    );
+
+    setupCalculator(
+
+        ".ef-retirement-calculator",
+
+        function (calculator) {
+
+            const currentAge = getValue(
+
+                calculator,
+
+                ".ef-current-age"
+
+            );
+
+            const retirementAge = getValue(
+
+                calculator,
+
+                ".ef-retirement-age"
+
+            );
+
+            const currentSavings = getValue(
+
+                calculator,
+
+                ".ef-current-savings"
+
+            );
+
+            const monthlyContribution = getValue(
+
+                calculator,
+
+                ".ef-monthly-contribution"
+
+            );
+
+            const realReturn = getValue(
+
+                calculator,
+
+                ".ef-real-return"
+
+            );
+
+            const monthlyIncome = getValue(
+
+                calculator,
+
+                ".ef-retirement-income"
+
+            );
+
+            const retirementYears = getValue(
+
+                calculator,
+
+                ".ef-retirement-years"
+
+            );
+
+            if (
+
+                isNaN(currentAge) ||
+
+                isNaN(retirementAge) ||
+
+                isNaN(currentSavings) ||
+
+                isNaN(monthlyContribution) ||
+
+                isNaN(realReturn) ||
+
+                isNaN(monthlyIncome) ||
+
+                isNaN(retirementYears) ||
+
+                currentAge < 18 ||
+
+                retirementAge <= currentAge ||
+
+                currentSavings < 0 ||
+
+                monthlyContribution < 0 ||
+
+                realReturn < 0 ||
+
+                monthlyIncome <= 0 ||
+
+                retirementYears <= 0
+
+            ) return null;
+
+            const result = EF.retirement(
+
+                currentAge,
+
+                retirementAge,
+
+                currentSavings,
+
+                monthlyContribution,
+
+                realReturn,
+
+                monthlyIncome,
+
+                retirementYears
+
+            );
+
+            return {
+
+                chart: result,
+
+                display: function (calculator) {
+
+                    calculator.querySelector(
+
+                        ".ef-retirement-target"
+
+                    ).textContent = EF.formatCurrency(result.target);
+
+                    calculator.querySelector(
+
+                        ".ef-retirement-projected"
+
+                    ).textContent = EF.formatCurrency(result.projected);
+
+                    calculator.querySelector(
+
+                        ".ef-retirement-difference"
+
+                    ).textContent = EF.formatCurrency(
+
+                        result.difference
+
+                    );
+
+                },
+
+                datasets: [
+
+                    line(
+
+                        "Capital proyectado",
+
+                        result.annualData.map(function (item) {
+
+                            return item.capital;
+
+                        }),
+
+                        "#3E5A3C",
+
+                        3
+
+                    ),
+
+                    line(
+
+                        "Capital necesario",
+
+                        result.annualData.map(function (item) {
+
+                            return item.target;
+
+                        }),
+
+                        "#BC6B4A",
+
+                        2
+
+                    )
+
+                ]
+
+            };
+
+        }
+
+    );
+
+    document.querySelectorAll(".ef-calculator").forEach(function (calculator) {
+
+        EF.setupSharing(
+
+            calculator,
+
+            function () {
+
+                return "He calculado mi resultado financiero en el Vademécum Financiero.";
+
+            }
+
+        );
+
+    });
 
 })();
