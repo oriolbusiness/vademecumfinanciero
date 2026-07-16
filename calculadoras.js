@@ -6,12 +6,9 @@
 
   EF.round2 = function (value) {
 
-    const number =
-      Number(value);
+    const number = Number(value);
 
-    if (
-      !Number.isFinite(number)
-    ) {
+    if (!Number.isFinite(number)) {
 
       return 0;
 
@@ -27,19 +24,16 @@
 
     const rounded = {};
 
-    Object.keys(object).forEach(
-      function (key) {
+    Object.keys(object).forEach(function (key) {
 
-        const value =
-          object[key];
+      const value = object[key];
 
-        rounded[key] =
-          typeof value === "number"
-            ? EF.round2(value)
-            : value;
+      rounded[key] =
+        typeof value === "number"
+          ? EF.round2(value)
+          : value;
 
-      }
-    );
+    });
 
     return rounded;
 
@@ -47,23 +41,17 @@
 
   EF.roundAnnualData = function (annualData) {
 
-    return annualData.map(
-      function (item) {
+    return annualData.map(function (item) {
 
-        return EF.roundObject(
-          item
-        );
+      return EF.roundObject(item);
 
-      }
-    );
+    });
 
   };
 
   EF.formatCurrency = function (value) {
 
-    return EF.round2(
-      value
-    ).toLocaleString(
+    return EF.round2(value).toLocaleString(
       "es-ES",
       {
         style: "currency",
@@ -89,9 +77,7 @@
         .replace(/\s/g, "")
         .trim();
 
-    if (
-      value === ""
-    ) {
+    if (value === "") {
 
       return 0;
 
@@ -104,14 +90,9 @@
   EF.formatInput = function (value) {
 
     const clean =
-      String(value).replace(
-        /\D/g,
-        ""
-      );
+      String(value).replace(/\D/g, "");
 
-    if (
-      clean === ""
-    ) {
+    if (clean === "") {
 
       return "";
 
@@ -127,78 +108,64 @@
   EF.setupInputs = function (calculator) {
 
     calculator
-      .querySelectorAll(
-        ".ef-input"
-      )
-      .forEach(
-        function (input) {
+      .querySelectorAll(".ef-input")
+      .forEach(function (input) {
 
-          input.addEventListener(
-            "input",
-            function () {
+        input.addEventListener(
+          "input",
+          function () {
 
-              const oldValue =
-                this.value;
+            const oldValue =
+              this.value;
 
-              const oldCursor =
-                this.selectionStart;
+            const oldCursor =
+              this.selectionStart;
 
-              const digitsBeforeCursor =
+            const digitsBeforeCursor =
+              oldValue
+                .slice(0, oldCursor)
+                .replace(/\D/g, "")
+                .length;
+
+            this.value =
+              EF.formatInput(
                 oldValue
-                  .slice(
-                    0,
-                    oldCursor
-                  )
-                  .replace(
-                    /\D/g,
-                    ""
-                  )
-                  .length;
+              );
 
-              this.value =
-                EF.formatInput(
-                  oldValue
-                );
+            let newCursor =
+              0;
 
-              let newCursor =
-                0;
+            let digitsSeen =
+              0;
 
-              let digitsSeen =
-                0;
+            while (
+              newCursor < this.value.length &&
+              digitsSeen < digitsBeforeCursor
+            ) {
 
-              while (
-                newCursor <
-                  this.value.length &&
-                digitsSeen <
-                  digitsBeforeCursor
+              if (
+                /\d/.test(
+                  this.value[newCursor]
+                )
               ) {
 
-                if (
-                  /\d/.test(
-                    this.value[
-                      newCursor
-                    ]
-                  )
-                ) {
-
-                  digitsSeen++;
-
-                }
-
-                newCursor++;
+                digitsSeen++;
 
               }
 
-              this.setSelectionRange(
-                newCursor,
-                newCursor
-              );
+              newCursor++;
 
             }
-          );
 
-        }
-      );
+            this.setSelectionRange(
+              newCursor,
+              newCursor
+            );
+
+          }
+        );
+
+      });
 
   };
 
@@ -293,17 +260,13 @@
       function () {
 
         calculator
-          .querySelectorAll(
-            "input"
-          )
-          .forEach(
-            function (input) {
+          .querySelectorAll("input")
+          .forEach(function (input) {
 
-              input.value =
-                "";
+            input.value =
+              "";
 
-            }
-          );
+          });
 
         const error =
           calculator.querySelector(
@@ -677,9 +640,7 @@
       12 / frequency;
 
     const periodRate =
-      rate /
-      100 /
-      frequency;
+      rate / 100 / frequency;
 
     const annualData = [
 
@@ -696,8 +657,7 @@
       0;
 
     const totalMonths =
-      years *
-      12;
+      years * 12;
 
     for (
       let month = 1;
@@ -713,8 +673,7 @@
       ) {
 
         const interest =
-          balance *
-          periodRate;
+          balance * periodRate;
 
         balance +=
           interest;
@@ -735,8 +694,7 @@
 
           invested:
             capital +
-            monthly *
-            month,
+            monthly * month,
 
           interest:
             totalInterest,
@@ -755,8 +713,7 @@
       invested:
         EF.round2(
           capital +
-          monthly *
-          totalMonths
+          monthly * totalMonths
         ),
 
       interest:
@@ -786,10 +743,7 @@
 
     const annualInterest =
       capital *
-      (
-        rate /
-        100
-      );
+      (rate / 100);
 
     const annualData =
       [];
@@ -885,10 +839,7 @@
 
     let totalInterest =
       capital *
-      (
-        rate /
-        100
-      ) *
+      (rate / 100) *
       years;
 
     let totalInvested =
@@ -1000,15 +951,13 @@
         (
           monthlyRate *
           Math.pow(
-            1 +
-            monthlyRate,
+            1 + monthlyRate,
             totalMonths
           )
         ) /
         (
           Math.pow(
-            1 +
-            monthlyRate,
+            1 + monthlyRate,
             totalMonths
           ) -
           1
@@ -1059,8 +1008,7 @@
         annualData.push({
 
           year:
-            month /
-            12,
+            month / 12,
 
           balance:
             Math.max(
@@ -1406,8 +1354,8 @@
     for (
       let month = 1;
       month <=
-        yearsToRetirement *
-        12;
+      yearsToRetirement *
+      12;
       month++
     ) {
 
@@ -1470,287 +1418,5 @@
     };
 
   };
-
-  EF.netWorth = function (
-    cash,
-    investments,
-    property,
-    otherAssets,
-    mortgageDebt,
-    loans,
-    creditCardDebt,
-    otherDebts
-  ) {
-
-    const totalAssets =
-      cash +
-      investments +
-      property +
-      otherAssets;
-
-    const totalLiabilities =
-      mortgageDebt +
-      loans +
-      creditCardDebt +
-      otherDebts;
-
-    return {
-
-      assets:
-        EF.round2(
-          totalAssets
-        ),
-
-      liabilities:
-        EF.round2(
-          totalLiabilities
-        ),
-
-      netWorth:
-        EF.round2(
-          totalAssets -
-          totalLiabilities
-        )
-
-    };
-
-  };
-
-  EF.initNetWorthCalculator = function (
-    calculator
-  ) {
-
-    const calculate =
-      calculator.querySelector(
-        ".ef-button"
-      );
-
-    if (!calculate) {
-
-      return;
-
-    }
-
-    EF.setupInputs(
-      calculator
-    );
-
-    EF.setupReset(
-      calculator
-    );
-
-    EF.setupSharing(
-      calculator,
-      function () {
-
-        const total =
-          calculator.querySelector(
-            ".ef-net-worth-total"
-          ).textContent;
-
-        const assets =
-          calculator.querySelector(
-            ".ef-net-worth-assets"
-          ).textContent;
-
-        const liabilities =
-          calculator.querySelector(
-            ".ef-net-worth-liabilities"
-          ).textContent;
-
-        return (
-          "Mi patrimonio neto es de " +
-          total +
-          ". Activos: " +
-          assets +
-          ". Deudas: " +
-          liabilities +
-          "."
-        );
-
-      }
-    );
-
-    calculate.addEventListener(
-      "click",
-      function () {
-
-        const cash =
-          EF.parseNumber(
-            calculator.querySelector(
-              ".ef-cash"
-            )
-          );
-
-        const investments =
-          EF.parseNumber(
-            calculator.querySelector(
-              ".ef-investments"
-            )
-          );
-
-        const property =
-          EF.parseNumber(
-            calculator.querySelector(
-              ".ef-property"
-            )
-          );
-
-        const otherAssets =
-          EF.parseNumber(
-            calculator.querySelector(
-              ".ef-other-assets"
-            )
-          );
-
-        const mortgageDebt =
-          EF.parseNumber(
-            calculator.querySelector(
-              ".ef-mortgage-debt"
-            )
-          );
-
-        const loans =
-          EF.parseNumber(
-            calculator.querySelector(
-              ".ef-loans"
-            )
-          );
-
-        const creditCardDebt =
-          EF.parseNumber(
-            calculator.querySelector(
-              ".ef-credit-card-debt"
-            )
-          );
-
-        const otherDebts =
-          EF.parseNumber(
-            calculator.querySelector(
-              ".ef-other-debts"
-            )
-          );
-
-        const values = [
-
-          cash,
-          investments,
-          property,
-          otherAssets,
-          mortgageDebt,
-          loans,
-          creditCardDebt,
-          otherDebts
-
-        ];
-
-        const invalid =
-          values.some(
-            function (value) {
-
-              return (
-                !Number.isFinite(value) ||
-                value < 0
-              );
-
-            }
-          );
-
-        if (invalid) {
-
-          EF.showError(
-            calculator
-          );
-
-          return;
-
-        }
-
-        const result =
-          EF.netWorth(
-            cash,
-            investments,
-            property,
-            otherAssets,
-            mortgageDebt,
-            loans,
-            creditCardDebt,
-            otherDebts
-          );
-
-        calculator.querySelector(
-          ".ef-net-worth-total"
-        ).textContent =
-          EF.formatCurrency(
-            result.netWorth
-          );
-
-        calculator.querySelector(
-          ".ef-net-worth-assets"
-        ).textContent =
-          EF.formatCurrency(
-            result.assets
-          );
-
-        calculator.querySelector(
-          ".ef-net-worth-liabilities"
-        ).textContent =
-          EF.formatCurrency(
-            result.liabilities
-          );
-
-        const error =
-          calculator.querySelector(
-            ".ef-error"
-          );
-
-        if (error) {
-
-          error.style.display =
-            "none";
-
-        }
-
-        EF.showResults(
-          calculator
-        );
-
-      }
-    );
-
-  };
-
-  EF.init = function () {
-
-    document
-      .querySelectorAll(
-        ".ef-net-worth-calculator"
-      )
-      .forEach(
-        function (calculator) {
-
-          EF.initNetWorthCalculator(
-            calculator
-          );
-
-        }
-      );
-
-  };
-
-  if (
-    document.readyState === "loading"
-  ) {
-
-    document.addEventListener(
-      "DOMContentLoaded",
-      EF.init
-    );
-
-  } else {
-
-    EF.init();
-
-  }
 
 })();
