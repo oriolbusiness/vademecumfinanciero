@@ -4,6 +4,8 @@
 
   window.EF = window.EF || {};
 
+  console.log("EF SCRIPT ACTUAL CARGADO");
+
   EF.round2 = function (value) {
 
     const number = Number(value);
